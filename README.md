@@ -9,15 +9,19 @@ Primeiro MVP de um editor visual para compor a página de produto, mantendo a Mo
 
 ```bash
 npm install
-npm run dev
+npm run dev   # painel (Vite, porta 5173) + servidor (Fastify, porta 3001)
 ```
 
-Para validar a versão de produção:
+Em desenvolvimento, sem `MONGO_URL`, o servidor sobe um MongoDB local (`mongodb-memory-server`) com os dados em `%LOCALAPPDATA%\moovin-templater\mongo`, fora do OneDrive. Variáveis: `MONGO_URL`, `MONGO_BANCO`, `MOOVIN_API` (padrão `https://api.moovin.app`), `PORTA`, `COOKIE_SEGURO=1` (com HTTPS) e `SESSAO_HORAS`.
 
-```bash
-npm run build
-npm run preview
-```
+## Acesso: login da Moovin
+
+O painel só abre com uma sessão válida da Moovin, como o painel administrativo dela. Não usa chave de API: o login é o e-mail e a senha do usuário, com a verificação em duas etapas e a escolha da loja, no mesmo fluxo do `id.moovin.app`. Detalhes em `server/moovin.ts`.
+
+- Os tokens da Moovin ficam só no servidor (MongoDB, coleção `sessoes`, que expira sozinha). O navegador recebe um cookie `HttpOnly` com o id da sessão.
+- O painel chama a Moovin por `/api/moovin/<serviço>/...`. O servidor repassa com o token da loja (`X-Authorization: Bearer`), só para os serviços liberados.
+- O token é revalidado na Moovin a cada 5 minutos. Se a Moovin recusar, a sessão acaba e o painel volta para o login.
+- O Complemento do cadastro e os templates ficam no MongoDB, separados pela loja (`/api/complementos/:produtoId` e `/api/templates/:tipo`).
 
 ## Telas
 

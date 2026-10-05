@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { api, EVENTO_SESSAO_EXPIRADA, type Sessao } from "./api";
+import { Login } from "./telas/Login";
 import { novoProduto } from "./produtos/modelo";
 import { repositorioLocal } from "./produtos/repositorio";
 import { EdicaoProduto } from "./telas/produtos/EdicaoProduto";
@@ -16,8 +18,27 @@ function useRota() {
   return rota.replace(/^#\/?/, "").split("/");
 }
 
+// Sessão do painel: sem login válido na Moovin, só a tela de login aparece.
+function useSessao() {
+  const [sessao, setSessao] = useState<Sessao | null>(null);
+  useEffect(() => {
+    api<Sessao>("sessao").then(setSessao, () => setSessao({ etapa: "login" }));
+    const expirou = () => setSessao({ etapa: "login" });
+    window.addEventListener(EVENTO_SESSAO_EXPIRADA, expirou);
+    return () => window.removeEventListener(EVENTO_SESSAO_EXPIRADA, expirou);
+  }, []);
+  return [sessao, setSessao] as const;
+}
+
 function App() {
+  const [sessao, setSessao] = useSessao();
   const [secao, id] = useRota();
+  if (!sessao) return <div className="login-fundo"><p className="vazio">Carregando…</p></div>;
+  if (sessao.etapa !== "ativa") return <Login sessao={sessao} aoMudar={setSessao} />;
+  return <Painel sessao={sessao} sair={() => api<Sessao>("sessao/sair", { corpo: {} }).then(setSessao)} secao={secao} id={id} />;
+}
+
+function Painel({ sessao, sair, secao, id }: { sessao: Sessao; sair: () => void; secao: string; id?: string }) {
   const repositorio = repositorioLocal;
 
   let tela;
@@ -46,6 +67,11 @@ function App() {
           <a className={secao !== "aparencia" ? "nav-active" : ""} href="#/produtos"><span>▧</span> Produtos</a>
           <a className={secao === "aparencia" ? "nav-active" : ""} href="#/aparencia"><span>◩</span> Aparência</a>
         </nav>
+        <div className="sidebar-conta">
+          <strong>{sessao.conta?.nome}</strong>
+          <span>{sessao.usuario?.nome}</span>
+          <button type="button" className="button button-plain" onClick={sair}>Sair</button>
+        </div>
       </aside>
       <main className="main-area">{tela}</main>
     </div>
