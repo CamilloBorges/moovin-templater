@@ -2,6 +2,9 @@
 
 Primeiro MVP de um editor visual para compor a página de produto, mantendo a Moovin responsável pelos dados e pelas funcionalidades nativas da loja.
 
+- [`docs/HISTORICO.md`](docs/HISTORICO.md): origem do projeto, decisões e próximos passos.
+- [`loja/script-produto-v3.js`](loja/script-produto-v3.js): o Script_Produto que roda hoje na loja, base para o renderizador.
+
 ## Executar localmente
 
 ```bash
