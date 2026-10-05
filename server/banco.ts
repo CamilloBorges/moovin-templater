@@ -17,7 +17,6 @@ export type Sessao = {
   expiraEm: Date; // índice TTL: o MongoDB apaga a sessão vencida
 };
 
-export type DocComplemento = { _id: string; conta: string; produtoId: string; complemento: unknown; atualizadoEm: Date; atualizadoPor: string };
 export type DocTemplate = { _id: string; conta: string; tipo: "rascunho" | "publicado"; dados: unknown; atualizadoEm: Date; atualizadoPor: string };
 
 let db: Db;
@@ -37,10 +36,8 @@ export async function conectar() {
   const cliente = await new MongoClient(url).connect();
   db = cliente.db(config.mongoBanco);
   await sessoes().createIndex({ expiraEm: 1 }, { expireAfterSeconds: 0 });
-  await complementos().createIndex({ conta: 1, produtoId: 1 }, { unique: true });
   await templates().createIndex({ conta: 1, tipo: 1 }, { unique: true });
 }
 
 export const sessoes = (): Collection<Sessao> => db.collection<Sessao>("sessoes");
-export const complementos = (): Collection<DocComplemento> => db.collection<DocComplemento>("complementos");
 export const templates = (): Collection<DocTemplate> => db.collection<DocTemplate>("templates");

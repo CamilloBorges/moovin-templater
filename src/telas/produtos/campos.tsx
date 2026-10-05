@@ -1,5 +1,5 @@
 import { useId, useState, type ReactNode } from "react";
-import { gerarUrl, type Referencia } from "../../produtos/modelo";
+import type { Referencia } from "../../produtos/modelo";
 
 // Peças de formulário da tela de produto, no visual do painel Moovin.
 
@@ -77,8 +77,8 @@ export function Alternador({ ligado, aoMudar, rotulo }: { ligado: boolean; aoMud
   );
 }
 
-// Escolhe um item da lista ou cria um novo pelo nome digitado ("Selecione ou crie…", como na Moovin).
-// Itens criados aqui ficam com id "nova:…" até a integração criá-los na Moovin.
+// Escolhe um item que já existe na Moovin (categoria, marca, atributo), com busca pelo nome.
+// Criar novos continua no painel da Moovin (e o Logus cria categorias e marcas).
 export function CampoReferencia({ opcoes, valor, aoMudar, placeholder, rotuloDe = (r) => r.nome }: {
   opcoes: Referencia[];
   valor: Referencia | null;
@@ -87,16 +87,18 @@ export function CampoReferencia({ opcoes, valor, aoMudar, placeholder, rotuloDe 
   rotuloDe?: (r: Referencia) => string;
 }) {
   const lista = useId();
-  const [texto, setTexto] = useState(valor ? rotuloDe(valor) : "");
+  const [texto, setTexto] = useState("");
   const [editando, setEditando] = useState(false);
+  const [naoAchou, setNaoAchou] = useState(false);
   const mostrado = editando ? texto : valor ? rotuloDe(valor) : "";
 
   function confirmar() {
     setEditando(false);
-    const nome = texto.trim();
-    if (!nome) return aoMudar(null);
-    const existente = opcoes.find((o) => rotuloDe(o).toLowerCase() === nome.toLowerCase() || o.nome.toLowerCase() === nome.toLowerCase());
-    aoMudar(existente ?? { id: `nova:${gerarUrl(nome)}`, nome });
+    const nome = texto.trim().toLowerCase();
+    if (!nome) { setNaoAchou(false); return aoMudar(null); }
+    const existente = opcoes.find((o) => rotuloDe(o).toLowerCase() === nome || o.nome.toLowerCase() === nome);
+    setNaoAchou(!existente);
+    if (existente) aoMudar(existente);
   }
 
   return (
@@ -111,7 +113,7 @@ export function CampoReferencia({ opcoes, valor, aoMudar, placeholder, rotuloDe 
         onBlur={confirmar}
         onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); (e.target as HTMLInputElement).blur(); } }}
       />
-      {valor?.id.startsWith("nova:") && <span className="selo-nova" title="Será criada na Moovin ao salvar, na etapa de integração">nova</span>}
+      {naoAchou && <small className="campo-erro">Não existe na Moovin. Escolha um item da lista.</small>}
       <datalist id={lista}>
         {opcoes.map((o) => <option key={o.id} value={rotuloDe(o)} />)}
       </datalist>

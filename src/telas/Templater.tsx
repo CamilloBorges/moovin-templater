@@ -1,28 +1,109 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Puck } from "@puckeditor/core";
-import type { ProdutoCadastro } from "../produtos/modelo";
+import { buscarCatalogo, carregarProduto, type ItemCatalogo } from "../produtos/moovin";
 import { config } from "../templater/config";
 import { dicionario } from "../templater/dicionario";
 import { BarraDeAcoes, BotaoModoPrevia, Estrutura } from "../templater/estrutura";
-import { CHAVE_PUBLICADO, CHAVE_RASCUNHO, lerTemplate, templatePadrao, type TemplateData } from "../templater/padrao";
-import { paraTemplate } from "../templater/produto";
+import { carregarTemplate, salvarTemplate, templatePadrao, type TemplateData } from "../templater/padrao";
+import { formatarMoeda, paraTemplate, type ProdutoTemplate } from "../templater/produto";
 
 const viewports = [
   { width: 1280, label: "Desktop", icon: "Monitor" as const },
   { width: 390, label: "Celular", icon: "Smartphone" as const },
 ];
 
-export function Templater({ produtos }: { produtos: ProdutoCadastro[] }) {
-  const [inicial, setInicial] = useState(() => lerTemplate(CHAVE_RASCUNHO) ?? templatePadrao);
-  const [versao, setVersao] = useState(0);
-  const [dados, setDados] = useState<TemplateData>(inicial);
-  const [status, setStatus] = useState(lerTemplate(CHAVE_RASCUNHO) ? "Rascunho carregado" : "Layout padrão");
+// Produto de exemplo escolhido por último (conveniência deste navegador).
+const CHAVE_EXEMPLO = "templater:produto-exemplo";
+function lerExemplo() {
+  try { return localStorage.getItem(CHAVE_EXEMPLO); } catch { return null; }
+}
+function gravarExemplo(id: string) {
+  try { localStorage.setItem(CHAVE_EXEMPLO, id); } catch { /* sem armazenamento: só não lembra */ }
+}
 
-  function salvar(publicar: boolean) {
-    const json = JSON.stringify(dados);
-    localStorage.setItem(CHAVE_RASCUNHO, json);
-    if (publicar) localStorage.setItem(CHAVE_PUBLICADO, json);
-    setStatus(publicar ? "Template publicado" : "Rascunho salvo");
+// Gaveta "Selecione um produto", como no editor de temas da Moovin (busca no catálogo publicado).
+function SeletorProduto({ fechar, escolher }: { fechar?: () => void; escolher: (id: string) => void }) {
+  const [busca, setBusca] = useState("");
+  const [itens, setItens] = useState<ItemCatalogo[] | null>(null);
+  const [erro, setErro] = useState("");
+  useEffect(() => {
+    setItens(null);
+    const espera = setTimeout(() => buscarCatalogo(busca).then(setItens, (e) => setErro(e.message)), 300);
+    return () => clearTimeout(espera);
+  }, [busca]);
+  return (
+    <div className="gaveta-fundo" onClick={fechar}>
+      <aside className="gaveta" onClick={(e) => e.stopPropagation()}>
+        <header>
+          <h2>Selecione um produto</h2>
+          {fechar && <button type="button" className="botao-icone" title="Fechar" onClick={fechar}>×</button>}
+        </header>
+        <input className="entrada" placeholder="Pesquisar produto" value={busca} onChange={(e) => setBusca(e.target.value)} autoFocus />
+        {erro && <p className="campo-erro">{erro}</p>}
+        <div className="gaveta-lista">
+          {!itens && !erro && <p className="vazio">Carregando produtos…</p>}
+          {itens?.map((i) => (
+            <button key={i.produtoId} type="button" onClick={() => escolher(i.produtoId)}>
+              {i.imagem ? <img src={i.imagem} alt="" loading="lazy" /> : <span className="sem-imagem" />}
+              <span>{i.nome}</span>
+              <b>{formatarMoeda(i.preco)}</b>
+            </button>
+          ))}
+          {itens?.length === 0 && <p className="vazio">Nenhum produto encontrado.</p>}
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+export function Templater() {
+  const [inicial, setInicial] = useState<TemplateData | null>(null);
+  const [versao, setVersao] = useState(0);
+  const [dados, setDados] = useState<TemplateData>(templatePadrao);
+  const [status, setStatus] = useState("");
+  const [produto, setProduto] = useState<{ id: string; nome: string; template: ProdutoTemplate } | null>(null);
+  const [seletor, setSeletor] = useState(false);
+  const [erro, setErro] = useState("");
+  // Objetos estáveis: o Puck recalcula o editor quando estas referências mudam.
+  const metadata = useMemo(() => ({ produto: produto?.template }), [produto]);
+  const overrides = useMemo(() => ({ headerActions: BotaoModoPrevia, outline: Estrutura, actionBar: BarraDeAcoes }), []);
+
+  // Template: o rascunho salvo, senão o publicado, senão o layout padrão.
+  useEffect(() => {
+    (async () => {
+      const rascunho = await carregarTemplate("rascunho");
+      const base = rascunho ?? (await carregarTemplate("publicado")) ?? templatePadrao;
+      setInicial(base);
+      setDados(base);
+      setStatus(rascunho ? "Rascunho carregado" : "Layout padrão");
+    })().catch((e) => setErro(e.message));
+  }, []);
+
+  function escolherProduto(id: string) {
+    setSeletor(false);
+    carregarProduto(id).then(
+      (o) => { setProduto({ id, nome: o.cadastro.nome, template: paraTemplate(o.cadastro) }); gravarExemplo(id); },
+      (e) => setErro(`Não foi possível carregar o produto: ${e.message}`),
+    );
+  }
+
+  // Produto de exemplo: o último escolhido; sem ele, abre o seletor (como na Moovin).
+  useEffect(() => {
+    const ultimo = lerExemplo();
+    if (ultimo) escolherProduto(ultimo);
+    else setSeletor(true);
+  }, []);
+
+  async function salvar(publicar: boolean) {
+    setStatus("Salvando…");
+    try {
+      await salvarTemplate("rascunho", dados);
+      if (publicar) await salvarTemplate("publicado", dados);
+      setStatus(publicar ? "Template publicado" : "Rascunho salvo");
+    } catch (e) {
+      setStatus("Erro ao salvar");
+      setErro(e instanceof Error ? e.message : String(e));
+    }
   }
 
   function restaurarPadrao() {
@@ -41,9 +122,6 @@ export function Templater({ produtos }: { produtos: ProdutoCadastro[] }) {
     URL.revokeObjectURL(url);
   }
 
-  const [produtoId, setProdutoId] = useState(produtos[0]?.id ?? "");
-  const produto = produtos.find((p) => p.id === produtoId) ?? produtos[0];
-
   return (
     <>
       <header className="topbar">
@@ -57,50 +135,39 @@ export function Templater({ produtos }: { produtos: ProdutoCadastro[] }) {
             <span className={status === "Alterações não salvas" ? "status-dot amber" : "status-dot"} />
             {status}
           </span>
-          <select
-            className="entrada seletor-produto"
-            title="Produto da prévia"
-            value={produto?.id ?? ""}
-            onChange={(e) => setProdutoId(e.target.value)}
-          >
-            {produtos.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nome || "Sem nome"}
-              </option>
-            ))}
-          </select>
-          <button className="button button-plain" onClick={restaurarPadrao}>
-            Restaurar padrão
+          <button className="button button-plain seletor-produto" title="Trocar o produto de exemplo" onClick={() => setSeletor(true)}>
+            {produto ? produto.nome : "Selecionar produto"} ⌄
           </button>
-          <button className="button button-plain" onClick={exportar}>
-            Exportar JSON
-          </button>
-          <button className="button button-secondary" onClick={() => salvar(false)}>
-            Salvar rascunho
-          </button>
-          <button className="button button-primary" onClick={() => salvar(true)}>
-            Publicar
-          </button>
+          <button className="button button-plain" onClick={restaurarPadrao}>Restaurar padrão</button>
+          <button className="button button-plain" onClick={exportar}>Exportar JSON</button>
+          <button className="button button-secondary" onClick={() => salvar(false)}>Salvar rascunho</button>
+          <button className="button button-primary" onClick={() => salvar(true)}>Publicar</button>
         </div>
       </header>
 
+      {erro && <p className="caixa-erros">{erro}</p>}
       <div className="editor-puck">
-        <Puck
-          key={versao}
-          config={config}
-          data={inicial}
-          onChange={(novo) => {
-            setDados(novo);
-            setStatus("Alterações não salvas");
-          }}
-          metadata={{ produto: produto ? paraTemplate(produto) : null }}
-          viewports={viewports}
-          dictionary={dicionario}
-          headerTitle={dados.root.props?.title ?? ""}
-          overrides={{ headerActions: BotaoModoPrevia, outline: Estrutura, actionBar: BarraDeAcoes }}
-          height="100%"
-        />
+        {inicial && produto ? (
+          <Puck
+            key={versao}
+            config={config}
+            data={inicial}
+            onChange={(novo) => {
+              setDados(novo);
+              setStatus("Alterações não salvas");
+            }}
+            metadata={metadata}
+            viewports={viewports}
+            dictionary={dicionario}
+            headerTitle={dados.root.props?.title ?? ""}
+            overrides={overrides}
+            height="100%"
+          />
+        ) : (
+          <p className="vazio carregando">{inicial ? "Selecione um produto de exemplo para editar o layout." : "Carregando o template…"}</p>
+        )}
       </div>
+      {seletor && <SeletorProduto fechar={produto ? () => setSeletor(false) : undefined} escolher={escolherProduto} />}
     </>
   );
 }

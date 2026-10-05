@@ -1,12 +1,12 @@
 import Fastify from "fastify";
 import cookie from "@fastify/cookie";
-import { complementos, conectar, sessoes, templates } from "./banco";
+import { conectar, sessoes, templates } from "./banco";
 import { config } from "./config";
 import { repassar } from "./moovin";
 import { exigirSessao, rotasSessao } from "./sessao";
 
 // Servidor do painel: login com a Moovin, repasse das chamadas à API com o token do usuário
-// e os dados próprios (Complemento do cadastro e templates) no MongoDB.
+// e os templates no MongoDB. O Complemento do cadastro fica na descrição do produto, na Moovin.
 
 const app = Fastify({ logger: { level: "info", redact: ["req.headers.cookie", "req.headers.authorization"] } });
 await app.register(cookie);
@@ -30,26 +30,6 @@ app.all<{ Params: { servico: string; "*": string } }>("/api/moovin/:servico/*", 
   }
   resposta.code(r.status).header("content-type", r.headers.get("content-type") ?? "application/json");
   return resposta.send(Buffer.from(await r.arrayBuffer()));
-});
-
-// Complemento do cadastro, por produto da loja.
-app.get<{ Params: { produtoId: string } }>("/api/complementos/:produtoId", { preHandler: exigirSessao }, async (pedido, resposta) => {
-  const doc = await complementos().findOne({ conta: pedido.sessao!.conta!.id, produtoId: pedido.params.produtoId });
-  return doc ? { complemento: doc.complemento, atualizadoEm: doc.atualizadoEm, atualizadoPor: doc.atualizadoPor } : resposta.code(404).send({ erro: "Sem complemento." });
-});
-
-app.put<{ Params: { produtoId: string }; Body: { complemento?: unknown } }>("/api/complementos/:produtoId", { preHandler: exigirSessao }, async (pedido, resposta) => {
-  const complemento = pedido.body?.complemento;
-  if (typeof complemento !== "object" || complemento === null) return resposta.code(400).send({ erro: "Complemento inválido." });
-  const conta = pedido.sessao!.conta!.id;
-  const { produtoId } = pedido.params;
-  const atualizadoEm = new Date();
-  await complementos().updateOne(
-    { conta, produtoId },
-    { $set: { complemento, atualizadoEm, atualizadoPor: pedido.sessao!.usuario?.email ?? "" }, $setOnInsert: { _id: `${conta}:${produtoId}` } },
-    { upsert: true },
-  );
-  return { ok: true, atualizadoEm };
 });
 
 // Templates da loja: rascunho e publicado.

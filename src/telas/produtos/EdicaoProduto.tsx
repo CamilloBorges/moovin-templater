@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Render } from "@puckeditor/core";
-import { EditorTexto } from "../../componentes/EditorTexto";
-import { caminhoDaCategoria, categorias, caracteristicas, marcas } from "../../produtos/catalogo";
-import { gerarUrl, type ProdutoCadastro, type Variacao } from "../../produtos/modelo";
-import type { RepositorioProdutos } from "../../produtos/repositorio";
+import { ErroApi } from "../../api";
+import { carregarCatalogo, type Catalogo } from "../../produtos/catalogo";
+import type { ProdutoCadastro, Variacao } from "../../produtos/modelo";
+import { carregarProduto, salvarProduto, type Original } from "../../produtos/moovin";
 import { config } from "../../templater/config";
-import { templatePublicado } from "../../templater/padrao";
+import { templatePublicado, type TemplateData } from "../../templater/padrao";
 import { formatarMoeda, paraTemplate } from "../../templater/produto";
 import { Alternador, Campo, CampoReferencia, Numero, Secao, Texto } from "./campos";
 import { SecoesComplemento } from "./Complemento";
@@ -31,6 +31,8 @@ function validar(p: ProdutoCadastro): Record<string, string> {
 }
 
 function PreviaPagina({ produto, fechar }: { produto: ProdutoCadastro; fechar: () => void }) {
+  const [template, setTemplate] = useState<TemplateData | null>(null);
+  useEffect(() => { templatePublicado().then(setTemplate); }, []);
   return (
     <div className="previa-fundo" role="dialog" aria-label="Prévia da página do produto">
       <div className="previa-janela">
@@ -39,24 +41,53 @@ function PreviaPagina({ produto, fechar }: { produto: ProdutoCadastro; fechar: (
           <button type="button" className="button button-secondary" onClick={fechar}>Fechar</button>
         </header>
         <div className="previa-conteudo">
-          <Render config={config} data={templatePublicado()} metadata={{ produto: paraTemplate(produto) }} />
+          {template ? <Render config={config} data={template} metadata={{ produto: paraTemplate(produto) }} /> : <p className="vazio">Carregando o template…</p>}
         </div>
       </div>
     </div>
   );
 }
 
-export function EdicaoProduto({ inicial, repositorio, voltar }: {
-  inicial: ProdutoCadastro;
-  repositorio: RepositorioProdutos;
-  voltar: () => void;
+// Carrega o produto da Moovin (com o complemento) e o catálogo de apoio.
+export function EdicaoProduto({ id }: { id: string }) {
+  const [dados, setDados] = useState<{ original: Original; catalogo: Catalogo } | null>(null);
+  const [erro, setErro] = useState("");
+  const [carga, setCarga] = useState(0);
+  const [mensagem, setMensagem] = useState(""); // resultado do último salvamento, mostrado após reler
+  useEffect(() => {
+    setErro("");
+    setDados(null); // o formulário só monta de novo com o produto relido
+    Promise.all([carregarProduto(id), carregarCatalogo()]).then(
+      ([original, catalogo]) => setDados({ original, catalogo }),
+      (e) => setErro(e instanceof ErroApi && e.status === 404 ? "Produto não encontrado na Moovin." : `Não foi possível carregar o produto: ${e.message}`),
+    );
+  }, [id, carga]);
+  if (erro) return <div className="pagina-produto"><p className="caixa-erros">{erro} <a href="#/produtos">Voltar à lista</a></p></div>;
+  if (!dados) return <div className="pagina-produto"><p className="vazio">Carregando o produto da Moovin…</p></div>;
+  return (
+    <FormularioProduto
+      key={carga}
+      original={dados.original}
+      catalogo={dados.catalogo}
+      avisoInicial={mensagem}
+      recarregar={(texto) => { setMensagem(texto); setCarga((c) => c + 1); }}
+    />
+  );
+}
+
+function FormularioProduto({ original, catalogo, avisoInicial, recarregar }: {
+  original: Original;
+  catalogo: Catalogo;
+  avisoInicial: string;
+  recarregar: (mensagem: string) => void;
 }) {
-  const [salvo, setSalvo] = useState(inicial);
-  const [produto, setProduto] = useState(inicial);
+  const salvo = original.cadastro;
+  const [produto, setProduto] = useState(salvo);
   const [mostrarErros, setMostrarErros] = useState(false);
   const [previa, setPrevia] = useState(false);
-  const [confirmarExclusao, setConfirmarExclusao] = useState(false);
-  const [aviso, setAviso] = useState("");
+  const [salvando, setSalvando] = useState(false);
+  const [erroSalvar, setErroSalvar] = useState("");
+  const [aviso, setAviso] = useState(avisoInicial);
   // Remonta os editores de texto ao descartar alterações (eles só leem o valor ao montar).
   const [versao, setVersao] = useState(0);
 
@@ -75,27 +106,34 @@ export function EdicaoProduto({ inicial, repositorio, voltar }: {
   const semDimensoes = Object.values(dimensoes).some((v) => !v);
   const prazo = unica.prazoExtraDias;
   const [prazoPersonalizado, setPrazoPersonalizado] = useState(prazo > 5);
+  const { categorias, marcas, caracteristicas, atributos } = catalogo;
+  const caminhoDaCategoria = (id: string) => categorias.find((c) => c.id === id)?.caminho ?? "";
   const caracteristicasDaCategoria = caracteristicas.filter((c) => produto.categoriaPrincipal && c.categorias.includes(produto.categoriaPrincipal.id));
-  const url = gerarUrl(produto.seo.url) || gerarUrl(produto.nome);
+  const url = produto.urn;
 
-  function salvar() {
+  // Grava na Moovin só as partes que mudaram e depois relê o produto, para mostrar o que ficou gravado.
+  async function salvar() {
     if (Object.keys(erros).length) {
       setMostrarErros(true);
       setAviso("Corrija os campos destacados antes de salvar.");
       return;
     }
-    const final = { ...produto, seo: { ...produto.seo, url } };
-    repositorio.salvar(final);
-    setProduto(final);
-    setSalvo(final);
-    setMostrarErros(false);
-    setAviso("Produto salvo.");
-    if (location.hash === "#/produtos/novo") location.hash = `#/produtos/${final.id}`;
+    setSalvando(true);
+    setErroSalvar("");
+    try {
+      const feito = await salvarProduto(original, produto);
+      recarregar(feito.length ? `Salvo: ${feito.join(", ")}.` : "Nada para salvar.");
+    } catch (e) {
+      setErroSalvar(`A gravação parou com erro: ${e instanceof Error ? e.message : e}. O que foi gravado antes do erro continua gravado; confira e salve de novo.`);
+      setSalvando(false);
+    }
   }
+
 
   function descartar() {
     setProduto(salvo);
     setVersao((v) => v + 1);
+    setErroSalvar("");
     setMostrarErros(false);
     setAviso("");
   }
@@ -104,18 +142,19 @@ export function EdicaoProduto({ inicial, repositorio, voltar }: {
     <>
       <header className="topbar">
         <div className="breadcrumbs">
-          <a href="#/produtos">Produtos</a><b>/</b><strong>{produto.nome || "Novo produto"}</strong>
+          <a href="#/produtos">Produtos</a><b>/</b><strong>{produto.nome}</strong>
         </div>
         <div className="heading-actions">
           {aviso && <span className="save-indicator">{aviso}</span>}
           {!aviso && alterado && <span className="save-indicator"><span className="status-dot amber" />Alterações não salvas</span>}
           <button className="button button-plain" onClick={() => setPrevia(true)}>Prévia da página</button>
-          <button className="button button-secondary" disabled={!alterado} onClick={descartar}>Descartar</button>
-          <button className="button button-primary" onClick={salvar}>Salvar</button>
+          <button className="button button-secondary" disabled={!alterado || salvando} onClick={descartar}>Descartar</button>
+          <button className="button button-primary" disabled={!alterado || salvando} onClick={salvar}>{salvando ? "Salvando…" : "Salvar na Moovin"}</button>
         </div>
       </header>
 
       <div className="pagina-produto" key={versao}>
+        {erroSalvar && <div className="caixa-erros">{erroSalvar}</div>}
         {mostrarErros && Object.keys(erros).length > 0 && (
           <div className="caixa-erros">
             <strong>Não foi possível salvar:</strong>
@@ -127,10 +166,7 @@ export function EdicaoProduto({ inicial, repositorio, voltar }: {
           <Campo rotulo="Nome do produto" obrigatorio logus erro={errosVisiveis.nome}>
             <Texto valor={produto.nome} aoMudar={(nome) => alterar({ nome })} />
           </Campo>
-          <div className="campo">
-            <span className="campo-rotulo">Descrição do produto</span>
-            <EditorTexto valor={produto.descricao} contarCaracteres aoMudar={(descricao) => alterar({ descricao })} />
-          </div>
+          <p className="campo-dica">A descrição do produto é montada pelas seções de resumo e abas, no fim desta página.</p>
         </Secao>
 
         <Secao titulo="Organização">
@@ -140,14 +176,14 @@ export function EdicaoProduto({ inicial, repositorio, voltar }: {
                 opcoes={categorias}
                 valor={produto.categoriaPrincipal}
                 rotuloDe={(c) => caminhoDaCategoria(c.id) || c.nome}
-                placeholder="Selecione ou crie uma nova categoria"
+                placeholder="Selecione a categoria"
                 aoMudar={(categoriaPrincipal) =>
                   alterar(categoriaPrincipal ? { categoriaPrincipal } : { categoriaPrincipal: null, categoriasAdicionais: [] })
                 }
               />
             </Campo>
             <Campo rotulo="Marca" obrigatorio erro={errosVisiveis.marca}>
-              <CampoReferencia opcoes={marcas} valor={produto.marca} placeholder="Selecione ou crie uma nova marca" aoMudar={(marca) => alterar({ marca })} />
+              <CampoReferencia opcoes={marcas} valor={produto.marca} placeholder="Selecione a marca" aoMudar={(marca) => alterar({ marca })} />
             </Campo>
           </div>
           <div className="campo">
@@ -175,7 +211,7 @@ export function EdicaoProduto({ inicial, repositorio, voltar }: {
           </div>
         </Secao>
 
-        <SecaoVariacoes produto={produto} alterar={alterar} erros={errosVisiveis} />
+        <SecaoVariacoes produto={produto} alterar={alterar} erros={errosVisiveis} atributosVariacao={atributos} />
 
         {!produto.possuiVariacoes && (
           <Secao titulo="Preços" descricao="Com o preço zerado, a loja mostra o botão “Preço sob consulta”.">
@@ -260,8 +296,8 @@ export function EdicaoProduto({ inicial, repositorio, voltar }: {
           <Campo rotulo="Meta title" dica={`${produto.seo.titulo.length}/70 caracteres`}>
             <Texto valor={produto.seo.titulo} maxLength={70} placeholder={produto.nome} aoMudar={(titulo) => alterar({ seo: { ...produto.seo, titulo } })} />
           </Campo>
-          <Campo rotulo="URL do produto" dica={`${LOJA}/${url}/p`}>
-            <Texto valor={produto.seo.url} placeholder={gerarUrl(produto.nome)} aoMudar={(v) => alterar({ seo: { ...produto.seo, url: v } })} />
+          <Campo rotulo="URL do produto" dica="Definida pela Moovin. Mudar o endereço fica no painel dela, para não quebrar links já publicados.">
+            <input className="entrada" value={`${LOJA}/${url}/p`} readOnly />
           </Campo>
           <Campo rotulo="Meta description" dica={`${produto.seo.descricao.length}/160 caracteres`}>
             <textarea className="entrada" rows={3} maxLength={160} value={produto.seo.descricao} onChange={(e) => alterar({ seo: { ...produto.seo, descricao: e.target.value } })} />
@@ -275,19 +311,13 @@ export function EdicaoProduto({ inicial, repositorio, voltar }: {
           <p className="link-produto">Link do produto: <a href={`${LOJA}/${url}/p`} target="_blank" rel="noreferrer">{`${LOJA}/${url}/p`}</a></p>
         </Secao>
 
-        <SecoesComplemento complemento={produto.complemento} preco={precoEfetivo} aoMudar={(complemento) => alterar({ complemento })} />
+        <SecoesComplemento
+          complemento={produto.complemento}
+          preco={precoEfetivo}
+          formatoAntigo={original.formatoAntigo && JSON.stringify(produto.complemento) === JSON.stringify(salvo.complemento)}
+          aoMudar={(complemento) => alterar({ complemento })}
+        />
 
-        <div className="zona-perigo">
-          {confirmarExclusao ? (
-            <>
-              <span>Excluir este produto? Esta ação não pode ser desfeita.</span>
-              <button type="button" className="button button-secondary" onClick={() => setConfirmarExclusao(false)}>Cancelar</button>
-              <button type="button" className="button botao-perigo" onClick={() => { repositorio.excluir(produto.id); voltar(); }}>Excluir</button>
-            </>
-          ) : (
-            <button type="button" className="button button-plain perigo" onClick={() => setConfirmarExclusao(true)}>Excluir produto</button>
-          )}
-        </div>
       </div>
 
       {previa && <PreviaPagina produto={produto} fechar={() => setPrevia(false)} />}

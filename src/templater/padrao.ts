@@ -1,4 +1,5 @@
 import type { Data } from "@puckeditor/core";
+import { api, ErroApi } from "../api";
 import type { RaizTemplate } from "./config";
 
 export type TemplateData = Data<Record<string, any>, RaizTemplate>;
@@ -61,21 +62,20 @@ export const templatePadrao: TemplateData = {
   ],
 };
 
-export function lerTemplate(chave: string): TemplateData | null {
+// Templates da loja, guardados no nosso servidor (MongoDB), por loja.
+export async function carregarTemplate(tipo: "rascunho" | "publicado"): Promise<TemplateData | null> {
   try {
-    const salvo: unknown = JSON.parse(localStorage.getItem(chave) ?? "null");
-    if (typeof salvo !== "object" || salvo === null || !("content" in salvo) || !Array.isArray(salvo.content)) {
-      return null;
-    }
-    return salvo as TemplateData;
-  } catch {
-    return null;
+    return (await api<{ dados: TemplateData }>(`templates/${tipo}`)).dados;
+  } catch (e) {
+    if (e instanceof ErroApi && e.status === 404) return null;
+    throw e;
   }
 }
 
-export const CHAVE_RASCUNHO = "templater:rascunho";
-export const CHAVE_PUBLICADO = "templater:publicado";
+export async function salvarTemplate(tipo: "rascunho" | "publicado", dados: TemplateData) {
+  await api(`templates/${tipo}`, { metodo: "PUT", corpo: { dados } });
+}
 
-export function templatePublicado(): TemplateData {
-  return lerTemplate(CHAVE_PUBLICADO) ?? templatePadrao;
+export async function templatePublicado(): Promise<TemplateData> {
+  return (await carregarTemplate("publicado")) ?? templatePadrao;
 }

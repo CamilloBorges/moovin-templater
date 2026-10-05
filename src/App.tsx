@@ -1,13 +1,11 @@
 import { useEffect, useState } from "react";
 import { api, EVENTO_SESSAO_EXPIRADA, type Sessao } from "./api";
 import { Login } from "./telas/Login";
-import { novoProduto } from "./produtos/modelo";
-import { repositorioLocal } from "./produtos/repositorio";
 import { EdicaoProduto } from "./telas/produtos/EdicaoProduto";
 import { ListaProdutos } from "./telas/produtos/ListaProdutos";
 import { Templater } from "./telas/Templater";
 
-// Navegação pelo endereço: #/produtos, #/produtos/<id>, #/produtos/novo e #/aparencia.
+// Navegação pelo endereço: #/produtos, #/produtos/<id> e #/aparencia.
 function useRota() {
   const [rota, setRota] = useState(location.hash);
   useEffect(() => {
@@ -39,21 +37,10 @@ function App() {
 }
 
 function Painel({ sessao, sair, secao, id }: { sessao: Sessao; sair: () => void; secao: string; id?: string }) {
-  const repositorio = repositorioLocal;
-
   let tela;
-  if (secao === "aparencia") {
-    tela = <Templater produtos={repositorio.listar()} />;
-  } else if (id) {
-    const produto = id === "novo" ? novoProduto() : repositorio.obter(id);
-    tela = produto ? (
-      <EdicaoProduto key={id} inicial={produto} repositorio={repositorio} voltar={() => { location.hash = "#/produtos"; }} />
-    ) : (
-      <p className="vazio">Produto não encontrado. <a href="#/produtos">Voltar à lista</a></p>
-    );
-  } else {
-    tela = <ListaProdutos produtos={repositorio.listar()} />;
-  }
+  if (secao === "aparencia") tela = <Templater />;
+  else if (id) tela = <EdicaoProduto key={id} id={id} />;
+  else tela = <ListaProdutos />;
 
   return (
     <div className="app-shell">

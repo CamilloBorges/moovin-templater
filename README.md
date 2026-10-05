@@ -21,7 +21,8 @@ O painel só abre com uma sessão válida da Moovin, como o painel administrativ
 - Os tokens da Moovin ficam só no servidor (MongoDB, coleção `sessoes`, que expira sozinha). O navegador recebe um cookie `HttpOnly` com o id da sessão.
 - O painel chama a Moovin por `/api/moovin/<serviço>/...`. O servidor repassa com o token da loja (`X-Authorization: Bearer`), só para os serviços liberados.
 - O token é revalidado na Moovin a cada 5 minutos. Se a Moovin recusar, a sessão acaba e o painel volta para o login.
-- O Complemento do cadastro e os templates ficam no MongoDB, separados pela loja (`/api/complementos/:produtoId` e `/api/templates/:tipo`).
+- Os templates (rascunho e publicado) ficam no MongoDB, separados pela loja (`/api/templates/:tipo`).
+- O **Complemento do cadastro fica na descrição do produto, na Moovin**, para a IA de atendimento (Moovin Desk) e os feeds lerem tudo. Convenção (`src/produtos/descricao.ts`): o que vem antes do primeiro Título (h2) é o resumo; a linha "Conteúdo da embalagem: 500 g" alimenta o preço por kg/L/un; cada Título abre uma aba. A tela mostra os campos separados e monta e lê o HTML; descrições no formato antigo (MODO NOVO / @) são lidas e convertidas ao salvar.
 
 ## Telas
 

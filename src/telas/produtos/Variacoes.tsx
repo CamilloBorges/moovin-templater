@@ -1,13 +1,13 @@
 import { useState } from "react";
-import { atributosVariacao } from "../../produtos/catalogo";
 import { novaVariacao, type ProdutoCadastro, type Referencia, type Variacao } from "../../produtos/modelo";
 import { Campo, CampoReferencia, Numero, Secao, Texto } from "./campos";
 
 // Como no botão "Gerar código" da Moovin: um código numérico de 13 dígitos.
 export const gerarSku = () => String(Date.now());
 
-export function SecaoVariacoes({ produto, alterar, erros }: {
+export function SecaoVariacoes({ produto, alterar, erros, atributosVariacao }: {
   produto: ProdutoCadastro;
+  atributosVariacao: Referencia[];
   alterar: (parcial: Partial<ProdutoCadastro>) => void;
   erros: Record<string, string>;
 }) {
@@ -83,7 +83,7 @@ export function SecaoVariacoes({ produto, alterar, erros }: {
                 opcoes={atributosVariacao}
                 valor={novoAtributo}
                 aoMudar={adicionarAtributo}
-                placeholder="Adicionar atributo (ex.: Peso, Corte)"
+                placeholder="Adicionar atributo"
               />
             </div>
           </div>

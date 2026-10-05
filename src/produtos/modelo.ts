@@ -1,7 +1,7 @@
 import type { ComplementoProduto } from "../templater/produto";
 
-// Cadastro do produto: espelha a tela de produto da Moovin e a API (oms-product, oms-pricing,
-// oms-inventory, eco-seo). O nome do campo na API vai no comentário, para a etapa de integração.
+// Cadastro do produto como a tela usa. Vem da API da Moovin (oms-product, oms-pricing,
+// oms-inventory, eco-seo) e do nosso banco (complemento); a conversão está em ./moovin.ts.
 
 export type Referencia = { id: string; nome: string };
 
@@ -22,7 +22,8 @@ export type Imagem = {
 };
 
 export type ProdutoCadastro = {
-  id: string; // uuid da URL do painel
+  id: string; // id do produto na Moovin (uuid)
+  urn: string; // groups[0].urn: o endereço do produto na loja (/<urn>/p) e a chave do SEO
   ativo: boolean; // active
   nome: string; // title
   descricao: string; // description (HTML)
@@ -35,7 +36,7 @@ export type ProdutoCadastro = {
   imagens: Imagem[];
   video: string; // video
   caracteristicas: Record<string, string>; // specifications: id da característica → valor
-  seo: { titulo: string; url: string; descricao: string }; // eco-seo /endpoint/:urn
+  seo: { titulo: string; url: string; descricao: string }; // eco-seo /endpoint/:urn (title e metadata description)
   visivelApenasPorLink: boolean;
   complemento: ComplementoProduto; // guardado fora da Moovin
 };
@@ -50,27 +51,6 @@ export function novaVariacao(atributos: Record<string, string> = {}): Variacao {
     dimensoes: { pesoG: 0, alturaCm: 0, larguraCm: 0, profundidadeCm: 0 },
     prazoExtraDias: 0,
     atributos,
-  };
-}
-
-export function novoProduto(): ProdutoCadastro {
-  return {
-    id: crypto.randomUUID(),
-    ativo: true,
-    nome: "",
-    descricao: "",
-    categoriaPrincipal: null,
-    categoriasAdicionais: [],
-    marca: null,
-    possuiVariacoes: false,
-    atributosVariacao: [],
-    variacoes: [novaVariacao()],
-    imagens: [],
-    video: "",
-    caracteristicas: {},
-    seo: { titulo: "", url: "", descricao: "" },
-    visivelApenasPorLink: false,
-    complemento: { conteudoComercial: null, resumo: "", abas: [] },
   };
 }
 
