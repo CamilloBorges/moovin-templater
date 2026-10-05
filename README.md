@@ -19,7 +19,30 @@ npm run build
 npm run preview
 ```
 
-## O que já está implementado
+## Telas
+
+O painel tem duas áreas, navegadas pelo endereço (`#/produtos` e `#/aparencia`).
+
+### Produtos (`src/telas/produtos/`)
+
+Substitui a tela de cadastro de produto da Moovin, com as mesmas seções, mais o Complemento:
+
+- **Informações principais:** ativo/inativo, nome e descrição (editor de texto formatado com contador).
+- **Organização:** categoria principal, mais categorias e marca. Permite escolher ou criar, como na Moovin.
+- **Variação:** SKU com "Gerar código", código de barras, MPN e estoque. Ou a tabela de variações, com atributos criados na hora e preço por variação.
+- **Preços:** preço, preço promocional (menor que o preço) e custo, com margem e lucro calculados. Preço zerado = sob consulta.
+- **Dimensões da embalagem e disponibilidade da entrega:** Imediata, de 1 a 5 dias úteis ou personalizada.
+- **Imagens e vídeo:** por link, com ordem e vínculo da imagem a uma variação. O envio de arquivo fica para a integração com a API.
+- **Características:** conforme a categoria.
+- **SEO**, **visível apenas por link** e o link do produto.
+- **Complemento do cadastro:** resumo, conteúdo comercial (com o preço por kg/L/un calculado), itens das abas definidas no template publicado e abas extras.
+- Validação ao salvar, descartar alterações, excluir e **prévia da página** com o template publicado.
+
+Os campos que o Logus também atualiza (nome, categoria, preço e estoque) têm o selo "Logus". Continuam editáveis, mas o Logus pode sobrescrevê-los em cerca de 30 minutos.
+
+Os dados ficam no navegador (`src/produtos/repositorio.ts`), começando pelos Cubos de Panela. O modelo (`src/produtos/modelo.ts`) traz, em comentário, o nome de cada campo na API da Moovin, para a etapa de integração.
+
+### Aparência: Templater (`src/telas/Templater.tsx`)
 
 Editor feito com [Puck](https://puckeditor.com/) (`@puckeditor/core`) dentro do visual do painel Moovin, com a interface em português.
 
@@ -29,11 +52,11 @@ Editor feito com [Puck](https://puckeditor.com/) (`@puckeditor/core`) dentro do 
   - *Produto (Moovin):* Galeria, Nome do produto, Preço/quantidade/comprar e Barra de compra fixa. Representam componentes nativos: o template decide onde aparecem, mas quem executa é a Moovin;
   - *Complemento do cadastro:* Resumo, Preço por kg/L/un e Abas de detalhes. As abas padrão são definidas no template e ligadas a campos do Complemento; o produto pode ter abas extras. Cada aba é uma lista de itens com título e texto formatado;
   - *Conteúdo:* Texto livre.
-- **Dados do produto** (`src/templater/produto.ts`): os blocos leem `moovin` (o cadastro atual) e `complemento` (os campos que o futuro Complemento do cadastro vai fornecer). A prévia usa os Cubos de Panela com o conteúdo publicado no shoptest.
+- **Dados do produto** (`src/templater/produto.ts`): os blocos leem `moovin` (recorte do cadastro) e `complemento` (o Complemento do cadastro). A prévia usa um produto cadastrado na tela de Produtos, escolhido no topo.
 - Cada bloco pode ter um nome próprio, que aparece na Estrutura e na etiqueta da prévia.
 - Prévia em desktop e celular, com o botão "Interagir com a prévia" para testar as abas. O rascunho e a publicação ficam no `localStorage`, e o template pode ser exportado em JSON.
 
-O salvamento local é apenas para o protótipo. Ainda não há API de templates nem renderizador na loja.
+O salvamento local é apenas para o protótipo. Ainda não há backend, API de templates nem renderizador na loja.
 
 ## Formato do template
 

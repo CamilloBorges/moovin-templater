@@ -115,9 +115,26 @@ Ainda não há backend, API de templates nem renderizador da loja.
   - Cada aba é uma **lista de itens com título e texto formatado** (HTML com negrito, listas e links, limpo com DOMPurify). A numeração "01 ·" vem do template e continua de uma aba para a outra.
 - O botão "Interagir com a prévia" (ou Ctrl+I) faz a prévia responder como na loja, com as abas clicáveis. No modo de edição, o clique serve para selecionar blocos.
 
+## Fase 4 — Tela de produtos com o Complemento (05/10/2026)
+
+- **Pedido do Camillo:** uma tela que substitua o cadastro de produto da Moovin, com todas as funções dela, mais o Complemento.
+- **Levantamento da tela da Moovin:** wiki (artigos de Produtos), API (`oms-product`, `oms-pricing`, `oms-inventory` e `eco-seo`) e o texto da tela dos Cubos registrado pela sessão do Copilot de 02/10 (o Chrome não estava logado na Moovin em 05/10).
+- **Decisões:**
+  - Dados de demonstração agora, com uma camada (`RepositorioProdutos`) pronta para trocar pela API.
+  - Campos que o Logus também atualiza continuam editáveis, com um selo de aviso.
+- **Dados reais na demonstração:**
+  - O "Cod.: 13925" que a loja exibe é o SKU (o GTIN também é 13925).
+  - A marca dos Cubos no painel é "Bomgado Seleção".
+  - As categorias vêm do menu do shoptest, e as 248 marcas, da planilha de marcas do cofre.
+- **O Templater passou a usar os produtos cadastrados** (seletor "Produto da prévia"). A tela de produto tem uma prévia da página com o template publicado.
+- **Fora desta etapa:**
+  - envio de imagem por arquivo (depende do `dam-storage`);
+  - preços por tabela de preço (a Moovin só mostra esses campos quando a loja tem uma tabela "por produto"; os Cubos não tinham em 02/10);
+  - atributos e características reais da loja (nenhum conhecido).
+
 ## Próximos passos
 
-1. **Complemento do cadastro:** um espelho do produto Moovin com os campos adicionais. O contrato já está em `ComplementoProduto` (`src/templater/produto.ts`): `conteudoComercial`, `resumo`, `campos` (itens de cada aba padrão, pela chave do campo) e `abasExtras`. Os campos das abas que ele precisa oferecer saem do template publicado. O texto dos itens precisa de um editor de formatação.
+1. **Backend e integração com a Moovin:** guardar `app_id`/`app_secret` no servidor; ler e gravar o cadastro pela API (o modelo já tem o nome de cada campo da API em comentário); guardar o Complemento na nossa base (decidir onde: Postgres da plataforma de dados ou outro) e ligá-lo ao produto pelo id.
 2. Escrever o renderizador da loja: ler o JSON do template e montar a página reaproveitando a V3 (`row`, `addSticky` e `renderTabs`), trocando os marcadores pelos dados do Complemento.
 3. Criar a API de templates (buscar o publicado, salvar rascunho, publicar versão, rollback) e trocar o `localStorage` do editor por ela.
 4. Confirmar com a Moovin como a sessão da loja é reconhecida entre domínios (cookie, CORS) e o que o script consegue ler do produto na página.

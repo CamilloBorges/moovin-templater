@@ -10,6 +10,9 @@
   },
   "dependencies": {
     "@puckeditor/core": "^0.23.0",
+    "@tiptap/pm": "^3.31.4",
+    "@tiptap/react": "^3.31.4",
+    "@tiptap/starter-kit": "^3.31.4",
     "@vitejs/plugin-react": "^4.3.4",
     "dompurify": "^3.4.16",
     "react": "^18.3.1",
