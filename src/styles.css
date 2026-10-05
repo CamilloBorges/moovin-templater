@@ -53,6 +53,13 @@ a { color: inherit; text-decoration: none; }
 .button-plain:hover { background: #f5f8f6; }
 
 .editor-puck { flex: 1; min-height: 0; }
+.estrutura { padding: 8px; }
+.estrutura-lista { list-style: none; margin: 0; padding: 0; }
+.estrutura-item { width: 100%; padding: 7px 10px; border: 0; border-radius: 6px; background: none; text-align: left; font-size: 13px; color: #3e4944; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.estrutura-item:hover { background: #f3f7f5; }
+.estrutura-item.selecionado { background: #eaf5f0; color: #117950; font-weight: 600; }
+.estrutura-area { display: block; padding: 4px 10px 2px; color: #9aa49f; font-size: 10px; letter-spacing: .5px; text-transform: uppercase; }
+.estrutura-vazia { color: #9aa49f; font-size: 13px; padding: 8px 10px; }
 
 /* Blocos do template (prévia). Visual do Script_Produto V3. */
 .tpl { --tpl-principal: #173a4d; --tpl-destaque: #b58a3c; --tpl-borda: rgba(23,58,77,.12); --tpl-sombra: 0 8px 26px rgba(23,58,77,.08);

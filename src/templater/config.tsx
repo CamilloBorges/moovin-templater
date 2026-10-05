@@ -27,6 +27,9 @@ type Blocos = {
   Texto: { texto: string };
 };
 
+// Todo bloco tem um nome próprio, usado só no editor (estrutura e etiqueta na prévia).
+type ComNome<T> = { [K in keyof T]: T[K] & { nome?: string } };
+
 export type RaizTemplate = { title: string; corPrincipal: string; corDestaque: string };
 
 const produtoDe = (metadata: Record<string, unknown>) => metadata.produto as ProdutoTemplate;
@@ -55,7 +58,7 @@ function Abas({ abas }: { abas: ProdutoTemplate["complemento"]["abas"] }) {
   );
 }
 
-export const config: Config<Blocos, RaizTemplate> = {
+export const config: Config<ComNome<Blocos>, RaizTemplate> = {
   root: {
     fields: {
       title: { type: "text", label: "Nome do template" },
@@ -224,3 +227,11 @@ export const config: Config<Blocos, RaizTemplate> = {
     },
   },
 };
+
+for (const bloco of Object.values(config.components)) {
+  bloco.fields = { nome: { type: "text", label: "Nome do bloco" }, ...bloco.fields };
+}
+
+export function nomeDoBloco(tipo: string, nome?: string) {
+  return nome?.trim() || config.components[tipo as keyof Blocos]?.label || tipo;
+}

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Puck } from "@puckeditor/core";
 import { config } from "./templater/config";
 import { dicionario } from "./templater/dicionario";
+import { BarraDeAcoes, Estrutura } from "./templater/estrutura";
 import { lerTemplate, templatePadrao, type TemplateData } from "./templater/padrao";
 import { produtoDemonstracao } from "./templater/produto";
 
@@ -80,7 +81,7 @@ function App() {
             viewports={viewports}
             dictionary={dicionario}
             headerTitle={dados.root.props?.title ?? ""}
-            overrides={{ headerActions: () => <></> }}
+            overrides={{ headerActions: () => <></>, outline: Estrutura, actionBar: BarraDeAcoes }}
             height="100%"
           />
         </div>

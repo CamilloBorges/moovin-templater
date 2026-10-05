@@ -13,6 +13,7 @@ export const templatePadrao: TemplateData = {
       type: "Colunas",
       props: {
         id: "colunas-produto",
+        nome: "Área do produto",
         proporcao: "50/50",
         esquerda: [{ type: "Galeria", props: { id: "galeria", sombra: "sim" } }],
         direita: [
@@ -20,6 +21,7 @@ export const templatePadrao: TemplateData = {
             type: "Cartao",
             props: {
               id: "cartao-informacoes",
+              nome: "Cartão de informações",
               fundo: "branco",
               conteudo: [
                 {
@@ -34,6 +36,7 @@ export const templatePadrao: TemplateData = {
             type: "Cartao",
             props: {
               id: "cartao-compra",
+              nome: "Cartão de compra",
               fundo: "branco",
               conteudo: [
                 { type: "LinhaCompra", props: { id: "linha-compra" } },
