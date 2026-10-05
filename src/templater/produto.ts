@@ -15,8 +15,14 @@ export type ProdutoMoovin = {
 export type ComplementoProduto = {
   conteudoComercial: { quantidade: number; unidade: UnidadeConteudo } | null;
   resumo: string;
-  abas: Array<{ titulo: string; conteudo: string }>;
+  // Conteúdo das abas definidas no template, pela chave do campo (ex.: "preparo").
+  campos: Record<string, ItemAba[]>;
+  // Abas que só este produto tem, exibidas depois das abas do template.
+  abasExtras: Array<{ titulo: string; itens: ItemAba[] }>;
 };
+
+// Um item de aba: título e texto formatado (HTML com negrito, listas e links).
+export type ItemAba = { titulo: string; texto: string };
 
 export type ProdutoTemplate = {
   moovin: ProdutoMoovin;
@@ -51,28 +57,40 @@ export const produtoDemonstracao: ProdutoTemplate = {
     conteudoComercial: { quantidade: 1, unidade: "kg" },
     resumo:
       "Cubos bovinos porcionados para ensopados e cozidos, com tamanho prático para dourar e cozinhar de maneira uniforme. Absorvem bem temperos, ervas e molhos. Na Linha Bomgado Origens, os cubos já porcionados combinam conveniência, procedência conhecida e o cuidado Bomgado em toda a cadeia.",
-    abas: [
-      {
-        titulo: "Preparo",
-        conteudo:
-          "Doure em pequenas levas antes de acrescentar líquido. Cozinhe em fogo baixo ou pressão até os cubos ficarem macios.\n\nPonto recomendado: cozimento completo, até ceder ao garfo.",
-      },
-      {
-        titulo: "Sugestões",
-        conteudo:
-          "Harmonização: Carménère, Tempranillo ou cerveja red ale.\n\nAcompanhamentos: purê, arroz, polenta e legumes de raiz.",
-      },
-      { titulo: "Porções", conteudo: "5 a 6 pessoas." },
-      {
-        titulo: "Origem e qualidade",
-        conteudo:
-          "Qualidade que começa na origem: controle de procedência, rastreabilidade e cuidado em cada etapa para levar à mesa uma carne com identidade, confiança e padrão Bomgado.",
-      },
-      {
-        titulo: "Informações importantes",
-        conteudo:
-          "Quando você escolhe produtos vendidos por peso, o valor final da sua compra pode variar de acordo com o peso exato dos itens selecionados.",
-      },
-    ],
+    campos: {
+      preparo: [
+        {
+          titulo: "Como preparar",
+          texto:
+            "<p>Doure em pequenas levas antes de acrescentar líquido. Cozinhe em fogo baixo ou pressão até os cubos ficarem macios.</p>",
+        },
+        { titulo: "Ponto recomendado", texto: "<p>Cozimento completo, até ceder ao garfo.</p>" },
+      ],
+      sugestoes: [
+        { titulo: "Sugestão de harmonização", texto: "<p>Carménère, Tempranillo ou cerveja red ale.</p>" },
+        { titulo: "Acompanhamentos que combinam", texto: "<p>Purê, arroz, polenta e legumes de raiz.</p>" },
+      ],
+      porcoes: [{ titulo: "Quantidade de porções", texto: "<p>5 a 6 pessoas.</p>" }],
+      origem: [
+        {
+          titulo: "Qualidade Bomgado",
+          texto:
+            "<p>Qualidade que começa na origem: controle de procedência, rastreabilidade e cuidado em cada etapa para levar à mesa uma carne com identidade, confiança e padrão Bomgado.</p>",
+        },
+        {
+          titulo: "Marca e linha",
+          texto:
+            "<p><strong>Marca:</strong> Bomgado. <strong>Linha:</strong> ORIGENS - carne de origem controlada, com rastreabilidade e cuidado acompanhado do campo à mesa. A linha traduz o compromisso Bomgado com manejo regenerativo, qualidade sensorial e confiança na procedência.</p>",
+        },
+      ],
+      importante: [
+        {
+          titulo: "Importante",
+          texto:
+            "<p>Quando você escolhe produtos vendidos por peso, o valor final da sua compra pode variar de acordo com o peso exato dos itens selecionados.</p>",
+        },
+      ],
+    },
+    abasExtras: [],
   },
 };

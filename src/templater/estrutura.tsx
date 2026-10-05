@@ -2,7 +2,8 @@ import type { ReactNode } from "react";
 import { ActionBar, createUsePuck } from "@puckeditor/core";
 import { config, nomeDoBloco } from "./config";
 
-// O Puck mostra sempre o rótulo do tipo de bloco. Estes dois substitutos mostram o "Nome do bloco".
+// Substitutos de partes da interface do Puck. Estrutura e BarraDeAcoes mostram o "Nome do bloco",
+// que o Puck não suporta (ele mostra sempre o rótulo do tipo).
 
 const usePuck = createUsePuck<typeof config>();
 
@@ -59,5 +60,21 @@ export function BarraDeAcoes({ label, children, parentAction }: { label?: string
       </ActionBar.Group>
       <ActionBar.Group>{children}</ActionBar.Group>
     </ActionBar>
+  );
+}
+
+// No modo de edição o Puck usa o clique para selecionar blocos; no modo interativo a prévia
+// responde como na loja (abas, por exemplo). Atalho do Puck: Ctrl+I.
+export function BotaoModoPrevia() {
+  const interativo = usePuck((s) => s.appState.ui.previewMode === "interactive");
+  const dispatch = usePuck((s) => s.dispatch);
+  return (
+    <button
+      type="button"
+      className={interativo ? "button button-primary" : "button button-secondary"}
+      onClick={() => dispatch({ type: "setUi", ui: { previewMode: interativo ? "edit" : "interactive" } })}
+    >
+      {interativo ? "Voltar a editar" : "Interagir com a prévia"}
+    </button>
   );
 }

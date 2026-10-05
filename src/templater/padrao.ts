@@ -49,7 +49,20 @@ export const templatePadrao: TemplateData = {
     },
     {
       type: "AbasDetalhes",
-      props: { id: "abas", sobretitulo: "CONHEÇA O PRODUTO", titulo: "Informações e detalhes" },
+      props: {
+        id: "abas",
+        sobretitulo: "CONHEÇA O PRODUTO",
+        titulo: "Informações e detalhes",
+        abas: [
+          { titulo: "Preparo", campo: "preparo" },
+          { titulo: "Sugestões", campo: "sugestoes" },
+          { titulo: "Porções", campo: "porcoes" },
+          { titulo: "Origem e qualidade", campo: "origem" },
+          { titulo: "Informações importantes", campo: "importante" },
+        ],
+        abasExtras: "sim",
+        numerar: "sim",
+      },
     },
     { type: "BarraCompraFixa", props: { id: "barra-fixa" } },
   ],

@@ -27,10 +27,11 @@ Editor feito com [Puck](https://puckeditor.com/) (`@puckeditor/core`) dentro do 
 - **Blocos** (`src/templater/config.tsx`), em quatro grupos:
   - *Estrutura:* Colunas e Cartão, que recebem outros blocos;
   - *Produto (Moovin):* Galeria, Nome do produto, Preço/quantidade/comprar e Barra de compra fixa. Representam componentes nativos: o template decide onde aparecem, mas quem executa é a Moovin;
-  - *Complemento do cadastro:* Resumo, Preço por kg/L/un e Abas de detalhes;
+  - *Complemento do cadastro:* Resumo, Preço por kg/L/un e Abas de detalhes. As abas padrão são definidas no template e ligadas a campos do Complemento; o produto pode ter abas extras. Cada aba é uma lista de itens com título e texto formatado;
   - *Conteúdo:* Texto livre.
 - **Dados do produto** (`src/templater/produto.ts`): os blocos leem `moovin` (o cadastro atual) e `complemento` (os campos que o futuro Complemento do cadastro vai fornecer). A prévia usa os Cubos de Panela com o conteúdo publicado no shoptest.
-- Prévia em desktop e celular. O rascunho e a publicação ficam no `localStorage`, e o template pode ser exportado em JSON.
+- Cada bloco pode ter um nome próprio, que aparece na Estrutura e na etiqueta da prévia.
+- Prévia em desktop e celular, com o botão "Interagir com a prévia" para testar as abas. O rascunho e a publicação ficam no `localStorage`, e o template pode ser exportado em JSON.
 
 O salvamento local é apenas para o protótipo. Ainda não há API de templates nem renderizador na loja.
 

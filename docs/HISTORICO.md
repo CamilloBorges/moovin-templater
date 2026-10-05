@@ -106,9 +106,18 @@ Ainda não há backend, API de templates nem renderizador da loja.
 - Os blocos são ligados a dados, não a conteúdo fixo: `moovin.*` vem do cadastro atual e `complemento.*` vem do futuro Complemento do cadastro (resumo, conteúdo comercial e abas).
 - Em 05/10 a descrição publicada dos Cubos já tinha os marcadores e informava "PESO DA UNIDADE/PACOTE — 1 kg", sem a linha `CONTEÚDO COMERCIAL`. A prévia usa 1 kg.
 
+### Nome dos blocos e abas (05/10/2026)
+
+- **Nome do bloco:** todo bloco tem um campo "Nome do bloco", usado só no editor. Como o Puck mostra sempre o rótulo do tipo, a Estrutura e a etiqueta da prévia foram substituídas por versões próprias (`src/templater/estrutura.tsx`). Em troca, não dá mais para arrastar blocos pela Estrutura, só pela prévia.
+- **Abas (decisão do Camillo):**
+  - O **template define as abas padrão**, cada uma ligada a um campo do Complemento (`preparo`, `sugestoes`, `porcoes`, `origem`, `importante`). Se o produto não preencher o campo, a aba não aparece.
+  - O **produto pode ter abas extras**, exibidas depois das abas padrão (o template pode desligar).
+  - Cada aba é uma **lista de itens com título e texto formatado** (HTML com negrito, listas e links, limpo com DOMPurify). A numeração "01 ·" vem do template e continua de uma aba para a outra.
+- O botão "Interagir com a prévia" (ou Ctrl+I) faz a prévia responder como na loja, com as abas clicáveis. No modo de edição, o clique serve para selecionar blocos.
+
 ## Próximos passos
 
-1. **Complemento do cadastro:** um espelho do produto Moovin com os campos adicionais. O contrato já está em `ComplementoProduto` (`src/templater/produto.ts`): `conteudoComercial`, `resumo` e `abas`.
+1. **Complemento do cadastro:** um espelho do produto Moovin com os campos adicionais. O contrato já está em `ComplementoProduto` (`src/templater/produto.ts`): `conteudoComercial`, `resumo`, `campos` (itens de cada aba padrão, pela chave do campo) e `abasExtras`. Os campos das abas que ele precisa oferecer saem do template publicado. O texto dos itens precisa de um editor de formatação.
 2. Escrever o renderizador da loja: ler o JSON do template e montar a página reaproveitando a V3 (`row`, `addSticky` e `renderTabs`), trocando os marcadores pelos dados do Complemento.
 3. Criar a API de templates (buscar o publicado, salvar rascunho, publicar versão, rollback) e trocar o `localStorage` do editor por ela.
 4. Confirmar com a Moovin como a sessão da loja é reconhecida entre domínios (cookie, CORS) e o que o script consegue ler do produto na página.
