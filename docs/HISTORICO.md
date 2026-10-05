@@ -99,10 +99,17 @@ MVP em React 18 + TypeScript + Vite (`src/App.tsx`, `src/styles.css`):
 
 Ainda não há backend, API de templates nem renderizador da loja.
 
+## Fase 3 — Templater com Puck (05/10/2026, no Claude Code)
+
+- **Decisões:** usar o Puck como motor do editor, com um único layout padrão para a loja; variações por categoria ou produto ficam para depois, como sobreposição.
+- O editor próprio do MVP foi substituído pelo Puck, e o painel Moovin foi mantido em volta. O template agora é o JSON de dados do Puck (ver README).
+- Os blocos são ligados a dados, não a conteúdo fixo: `moovin.*` vem do cadastro atual e `complemento.*` vem do futuro Complemento do cadastro (resumo, conteúdo comercial e abas).
+- Em 05/10 a descrição publicada dos Cubos já tinha os marcadores e informava "PESO DA UNIDADE/PACOTE — 1 kg", sem a linha `CONTEÚDO COMERCIAL`. A prévia usa 1 kg.
+
 ## Próximos passos
 
-1. Definir o contrato do template v1. O formato atual do editor (`blocks` em lista) não tem colunas nem propriedades, enquanto o layout da V3 precisa de duas colunas, cartões e abas.
-2. Escrever o renderizador da loja a partir da V3: reaproveitar `row`, `parse`, `addSticky`, `updateUnitPrice` e `renderTabs`, trocando os marcadores pelo template vindo da API.
-3. Criar a API de templates (buscar o publicado por loja/produto, salvar rascunho, publicar versão, rollback) e trocar o `localStorage` do editor por ela.
+1. **Complemento do cadastro:** um espelho do produto Moovin com os campos adicionais. O contrato já está em `ComplementoProduto` (`src/templater/produto.ts`): `conteudoComercial`, `resumo` e `abas`.
+2. Escrever o renderizador da loja: ler o JSON do template e montar a página reaproveitando a V3 (`row`, `addSticky` e `renderTabs`), trocando os marcadores pelos dados do Complemento.
+3. Criar a API de templates (buscar o publicado, salvar rascunho, publicar versão, rollback) e trocar o `localStorage` do editor por ela.
 4. Confirmar com a Moovin como a sessão da loja é reconhecida entre domínios (cookie, CORS) e o que o script consegue ler do produto na página.
 5. Prever fallback: se a API cair ou o template for inválido, a página fica no layout nativo.
