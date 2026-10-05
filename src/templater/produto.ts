@@ -16,15 +16,12 @@ export type ProdutoMoovin = {
 
 export type ComplementoProduto = {
   conteudoComercial: { quantidade: number; unidade: UnidadeConteudo } | null;
-  resumo: string;
-  // Conteúdo das abas definidas no template, pela chave do campo (ex.: "preparo").
-  campos: Record<string, ItemAba[]>;
-  // Abas que só este produto tem, exibidas depois das abas do template.
-  abasExtras: Array<{ titulo: string; itens: ItemAba[] }>;
+  resumo: string; // HTML
+  // Abas do produto, quantas forem necessárias. O template decide onde e como aparecem.
+  abas: Aba[];
 };
 
-// Um item de aba: título e texto formatado (HTML com negrito, listas e links).
-export type ItemAba = { titulo: string; texto: string };
+export type Aba = { titulo: string; conteudo: string }; // conteúdo em HTML
 
 export type ProdutoTemplate = {
   moovin: ProdutoMoovin;

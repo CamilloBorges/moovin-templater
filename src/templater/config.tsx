@@ -1,7 +1,7 @@
 import { useState, type CSSProperties } from "react";
 import type { Config, Slot } from "@puckeditor/core";
 import DOMPurify from "dompurify";
-import { formatarMoeda, precoPorUnidade, type ItemAba, type ProdutoTemplate } from "./produto";
+import { formatarMoeda, precoPorUnidade, type Aba, type ProdutoTemplate } from "./produto";
 
 // Blocos do template da página de produto. Os blocos de "Produto (Moovin)" representam
 // componentes nativos da loja: o template decide onde e como aparecem, a Moovin executa.
@@ -24,13 +24,7 @@ type Blocos = {
   BarraCompraFixa: {};
   Resumo: {};
   PrecoPorUnidade: {};
-  AbasDetalhes: {
-    sobretitulo: string;
-    titulo: string;
-    abas: Array<{ titulo: string; campo: string }>;
-    abasExtras: SimNao;
-    numerar: SimNao;
-  };
+  AbasDetalhes: { sobretitulo: string; titulo: string; estilo: "abas" | "sanfona" | "lista"; numerar: SimNao };
   Texto: { texto: string };
 };
 
@@ -45,34 +39,49 @@ function Vazio({ texto }: { texto: string }) {
   return <div className="tpl-vazio">{texto}</div>;
 }
 
-type AbaMontada = { titulo: string; itens: ItemAba[] };
+const html = (conteudo: string) => ({ __html: DOMPurify.sanitize(conteudo) });
 
-function Abas({ abas, numerar }: { abas: AbaMontada[]; numerar: boolean }) {
+// O template só decide onde e como as abas aparecem; elas vêm do Complemento do produto,
+// quantas forem. Estilos: abas (navegação horizontal), sanfona (abre e fecha) e lista (tudo aberto).
+function Abas({ abas, estilo, numerar }: { abas: Aba[]; estilo: "abas" | "sanfona" | "lista"; numerar: boolean }) {
   const [ativa, setAtiva] = useState(0);
   const indice = Math.min(ativa, abas.length - 1);
-  // A numeração dos itens continua de uma aba para a outra, como na descrição publicada.
-  const inicio = abas.slice(0, indice).reduce((total, aba) => total + aba.itens.length, 0);
+  const numero = (i: number) => numerar && <span className="tpl-aba-numero">{String(i + 1).padStart(2, "0")}</span>;
+  if (estilo === "lista") {
+    return (
+      <div className="tpl-abas tpl-abas-lista">
+        {abas.map((aba, i) => (
+          <section key={aba.titulo + i}>
+            <h3 className="tpl-aba-titulo">{numero(i)}{aba.titulo}</h3>
+            <div className="tpl-aba-conteudo" dangerouslySetInnerHTML={html(aba.conteudo)} />
+          </section>
+        ))}
+      </div>
+    );
+  }
+  if (estilo === "sanfona") {
+    return (
+      <div className="tpl-abas tpl-abas-sanfona">
+        {abas.map((aba, i) => (
+          <details key={aba.titulo + i} open={i === 0}>
+            <summary className="tpl-aba-titulo">{numero(i)}{aba.titulo}</summary>
+            <div className="tpl-aba-conteudo" dangerouslySetInnerHTML={html(aba.conteudo)} />
+          </details>
+        ))}
+      </div>
+    );
+  }
   return (
     <div className="tpl-abas">
       <div className="tpl-abas-nav" role="tablist">
         {abas.map((aba, i) => (
           <button key={aba.titulo + i} type="button" role="tab" aria-selected={i === indice} onClick={() => setAtiva(i)}>
-            <span>{String(i + 1).padStart(2, "0")}</span>
+            {numero(i)}
             {aba.titulo}
           </button>
         ))}
       </div>
-      <div className="tpl-abas-painel" role="tabpanel">
-        {abas[indice].itens.map((item, i) => (
-          <div className="tpl-aba-item" key={item.titulo + i}>
-            <h3>
-              {numerar && <span>{String(inicio + i + 1).padStart(2, "0")} · </span>}
-              {item.titulo}
-            </h3>
-            <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(item.texto) }} />
-          </div>
-        ))}
-      </div>
+      <div className="tpl-abas-painel tpl-aba-conteudo" role="tabpanel" dangerouslySetInnerHTML={html(abas[indice].conteudo)} />
     </div>
   );
 }
@@ -207,7 +216,7 @@ export const config: Config<ComNome<Blocos>, RaizTemplate> = {
       label: "Resumo do produto",
       render: ({ puck }) => {
         const { resumo } = produtoDe(puck.metadata).complemento;
-        if (resumo) return <p className="tpl-resumo">{resumo}</p>;
+        if (resumo) return <div className="tpl-resumo" dangerouslySetInnerHTML={html(resumo)} />;
         return puck.isEditing ? <Vazio texto="Produto sem resumo no complemento" /> : <></>;
       },
     },
@@ -225,41 +234,28 @@ export const config: Config<ComNome<Blocos>, RaizTemplate> = {
       fields: {
         sobretitulo: { type: "text", label: "Sobretítulo" },
         titulo: { type: "text", label: "Título" },
-        abas: {
-          type: "array",
-          label: "Abas do template",
-          arrayFields: {
-            titulo: { type: "text", label: "Título da aba" },
-            campo: { type: "text", label: "Campo do Complemento" },
-          },
-          defaultItemProps: { titulo: "Nova aba", campo: "" },
-          getItemSummary: (aba) => aba.titulo || "Aba sem título",
+        estilo: {
+          type: "select",
+          label: "Estilo",
+          options: [
+            { label: "Abas", value: "abas" },
+            { label: "Sanfona (abre e fecha)", value: "sanfona" },
+            { label: "Lista (tudo aberto)", value: "lista" },
+          ],
         },
-        abasExtras: { ...simNao, label: "Mostrar abas extras do produto" },
-        numerar: { ...simNao, label: "Numerar os itens" },
+        numerar: { ...simNao, label: "Numerar as abas" },
       },
-      defaultProps: {
-        sobretitulo: "CONHEÇA O PRODUTO",
-        titulo: "Informações e detalhes",
-        abas: [],
-        abasExtras: "sim",
-        numerar: "sim",
-      },
-      render: ({ sobretitulo, titulo, abas, abasExtras, numerar, puck }) => {
-        const { campos, abasExtras: extras } = produtoDe(puck.metadata).complemento;
-        // Aba do template sem conteúdo no produto não aparece.
-        const montadas: AbaMontada[] = [
-          ...(abas ?? []).map((aba) => ({ titulo: aba.titulo, itens: campos[aba.campo] ?? [] })),
-          ...(abasExtras === "sim" ? extras : []),
-        ].filter((aba) => aba.itens.length > 0);
+      defaultProps: { sobretitulo: "CONHEÇA O PRODUTO", titulo: "Informações e detalhes", estilo: "abas", numerar: "sim" },
+      render: ({ sobretitulo, titulo, estilo, numerar, puck }) => {
+        const abas = produtoDe(puck.metadata).complemento.abas.filter((aba) => aba.titulo || aba.conteudo);
         return (
           <section className="tpl-detalhes">
-            <span className="tpl-sobretitulo">{sobretitulo}</span>
-            <h2>{titulo}</h2>
-            {montadas.length > 0 ? (
-              <Abas abas={montadas} numerar={numerar === "sim"} />
+            {sobretitulo && <span className="tpl-sobretitulo">{sobretitulo}</span>}
+            {titulo && <h2>{titulo}</h2>}
+            {abas.length > 0 ? (
+              <Abas abas={abas} estilo={estilo ?? "abas"} numerar={numerar === "sim"} />
             ) : (
-              puck.isEditing && <Vazio texto="Produto sem conteúdo para as abas" />
+              puck.isEditing && <Vazio texto="Produto sem abas no complemento" />
             )}
           </section>
         );

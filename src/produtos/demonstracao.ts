@@ -38,41 +38,29 @@ export const cubosDePanela: ProdutoCadastro = {
   complemento: {
     conteudoComercial: { quantidade: 1, unidade: "kg" },
     resumo:
-      "Cubos bovinos porcionados para ensopados e cozidos, com tamanho prático para dourar e cozinhar de maneira uniforme. Absorvem bem temperos, ervas e molhos. Na Linha Bomgado Origens, os cubos já porcionados combinam conveniência, procedência conhecida e o cuidado Bomgado em toda a cadeia.",
-    campos: {
-      preparo: [
-        {
-          titulo: "Como preparar",
-          texto:
-            "<p>Doure em pequenas levas antes de acrescentar líquido. Cozinhe em fogo baixo ou pressão até os cubos ficarem macios.</p>",
-        },
-        { titulo: "Ponto recomendado", texto: "<p>Cozimento completo, até ceder ao garfo.</p>" },
-      ],
-      sugestoes: [
-        { titulo: "Sugestão de harmonização", texto: "<p>Carménère, Tempranillo ou cerveja red ale.</p>" },
-        { titulo: "Acompanhamentos que combinam", texto: "<p>Purê, arroz, polenta e legumes de raiz.</p>" },
-      ],
-      porcoes: [{ titulo: "Quantidade de porções", texto: "<p>5 a 6 pessoas.</p>" }],
-      origem: [
-        {
-          titulo: "Qualidade Bomgado",
-          texto:
-            "<p>Qualidade que começa na origem: controle de procedência, rastreabilidade e cuidado em cada etapa para levar à mesa uma carne com identidade, confiança e padrão Bomgado.</p>",
-        },
-        {
-          titulo: "Marca e linha",
-          texto:
-            "<p><strong>Marca:</strong> Bomgado. <strong>Linha:</strong> ORIGENS - carne de origem controlada, com rastreabilidade e cuidado acompanhado do campo à mesa. A linha traduz o compromisso Bomgado com manejo regenerativo, qualidade sensorial e confiança na procedência.</p>",
-        },
-      ],
-      importante: [
-        {
-          titulo: "Importante",
-          texto:
-            "<p>Quando você escolhe produtos vendidos por peso, o valor final da sua compra pode variar de acordo com o peso exato dos itens selecionados.</p>",
-        },
-      ],
-    },
-    abasExtras: [],
+      "<p>Cubos bovinos porcionados para ensopados e cozidos, com tamanho prático para dourar e cozinhar de maneira uniforme. Absorvem bem temperos, ervas e molhos. Na Linha Bomgado Origens, os cubos já porcionados combinam conveniência, procedência conhecida e o cuidado Bomgado em toda a cadeia.</p>",
+    abas: [
+      {
+        titulo: "Preparo",
+        conteudo:
+          "<h3>Como preparar</h3><p>Doure em pequenas levas antes de acrescentar líquido. Cozinhe em fogo baixo ou pressão até os cubos ficarem macios.</p><h3>Ponto recomendado</h3><p>Cozimento completo, até ceder ao garfo.</p>",
+      },
+      {
+        titulo: "Sugestões",
+        conteudo:
+          "<h3>Sugestão de harmonização</h3><p>Carménère, Tempranillo ou cerveja red ale.</p><h3>Acompanhamentos que combinam</h3><p>Purê, arroz, polenta e legumes de raiz.</p>",
+      },
+      { titulo: "Porções", conteudo: "<h3>Quantidade de porções</h3><p>5 a 6 pessoas.</p>" },
+      {
+        titulo: "Origem e qualidade",
+        conteudo:
+          "<h3>Qualidade Bomgado</h3><p>Qualidade que começa na origem: controle de procedência, rastreabilidade e cuidado em cada etapa para levar à mesa uma carne com identidade, confiança e padrão Bomgado.</p><h3>Marca e linha</h3><p><strong>Marca:</strong> Bomgado. <strong>Linha:</strong> ORIGENS - carne de origem controlada, com rastreabilidade e cuidado acompanhado do campo à mesa. A linha traduz o compromisso Bomgado com manejo regenerativo, qualidade sensorial e confiança na procedência.</p>",
+      },
+      {
+        titulo: "Informações importantes",
+        conteudo:
+          "<h3>Importante</h3><p>Quando você escolhe produtos vendidos por peso, o valor final da sua compra pode variar de acordo com o peso exato dos itens selecionados.</p>",
+      },
+    ],
   },
 };

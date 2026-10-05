@@ -53,14 +53,7 @@ export const templatePadrao: TemplateData = {
         id: "abas",
         sobretitulo: "CONHEÇA O PRODUTO",
         titulo: "Informações e detalhes",
-        abas: [
-          { titulo: "Preparo", campo: "preparo" },
-          { titulo: "Sugestões", campo: "sugestoes" },
-          { titulo: "Porções", campo: "porcoes" },
-          { titulo: "Origem e qualidade", campo: "origem" },
-          { titulo: "Informações importantes", campo: "importante" },
-        ],
-        abasExtras: "sim",
+        estilo: "abas",
         numerar: "sim",
       },
     },
@@ -85,24 +78,4 @@ export const CHAVE_PUBLICADO = "templater:publicado";
 
 export function templatePublicado(): TemplateData {
   return lerTemplate(CHAVE_PUBLICADO) ?? templatePadrao;
-}
-
-// Abas definidas nos blocos "Abas de detalhes" do template (inclusive dentro de colunas e cartões).
-// São os campos que o Complemento do cadastro precisa oferecer.
-export function abasDoTemplate(template: TemplateData): Array<{ titulo: string; campo: string }> {
-  const abas: Array<{ titulo: string; campo: string }> = [];
-  const visitar = (itens: unknown) => {
-    if (!Array.isArray(itens)) return;
-    for (const item of itens as Array<{ type?: string; props?: Record<string, unknown> }>) {
-      if (typeof item?.type !== "string" || !item.props) continue; // não é um bloco (ex.: a lista de abas)
-      if (item.type === "AbasDetalhes" && Array.isArray(item.props.abas)) {
-        for (const aba of item.props.abas as Array<{ titulo: string; campo: string }>) {
-          if (aba.campo && !abas.some((a) => a.campo === aba.campo)) abas.push(aba);
-        }
-      }
-      Object.values(item.props).forEach(visitar);
-    }
-  };
-  visitar(template.content);
-  return abas;
 }

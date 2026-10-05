@@ -70,7 +70,7 @@ export function novoProduto(): ProdutoCadastro {
     caracteristicas: {},
     seo: { titulo: "", url: "", descricao: "" },
     visivelApenasPorLink: false,
-    complemento: { conteudoComercial: null, resumo: "", campos: {}, abasExtras: [] },
+    complemento: { conteudoComercial: null, resumo: "", abas: [] },
   };
 }
 

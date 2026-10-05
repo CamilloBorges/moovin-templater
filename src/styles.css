@@ -148,6 +148,17 @@ textarea.entrada { height: auto; padding: 8px 10px; resize: vertical; font-famil
 .editor-texto-area .tiptap { min-height: 90px; padding: 10px 12px; outline: none; font-size: 13px; line-height: 1.6; }
 .editor-texto-area .tiptap p { margin: 0 0 8px; }
 .editor-texto-area .tiptap a { color: var(--green); text-decoration: underline; }
+.editor-texto-area .tiptap img, .tpl-aba-conteudo img, .tpl-resumo img { max-width: 100%; height: auto; border-radius: 6px; }
+.editor-texto-area .tiptap img.ProseMirror-selectednode { outline: 2px solid var(--green); }
+.editor-texto-area .tiptap blockquote, .tpl-aba-conteudo blockquote { margin: 0 0 8px; padding-left: 12px; border-left: 3px solid #cfd8d3; color: #5f6b65; }
+.editor-texto-area .tiptap pre, .tpl-aba-conteudo pre { padding: 8px 10px; border-radius: 6px; background: #f3f5f4; font-size: 12px; white-space: pre-wrap; }
+.editor-texto-barra select { height: 26px; border: 1px solid #dfe6e2; border-radius: 4px; background: #fff; font-size: 12px; color: #4a5550; }
+.editor-texto-barra button:disabled { opacity: .35; cursor: default; }
+.editor-texto-barra .separador { width: 1px; height: 18px; margin: 0 3px; background: var(--line); }
+.editor-texto-cor { position: relative; min-width: 28px; height: 26px; display: grid; place-items: center; border-radius: 4px; color: #4a5550; font-weight: 700; font-size: 12px; cursor: pointer; }
+.editor-texto-cor:hover { background: #f3f7f5; }
+.editor-texto-cor input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.editor-texto-cor.marca { color: #e0b400; }
 .estrutura { padding: 8px; }
 .estrutura-lista { list-style: none; margin: 0; padding: 0; }
 .estrutura-item { width: 100%; padding: 7px 10px; border: 0; border-radius: 6px; background: none; text-align: left; font-size: 13px; color: #3e4944; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -182,15 +193,22 @@ textarea.entrada { height: auto; padding: 8px 10px; resize: vertical; font-famil
 .tpl-abas { overflow: hidden; border: 1px solid var(--tpl-borda); border-radius: 20px; background: #fff; box-shadow: var(--tpl-sombra); }
 .tpl-abas-nav { display: flex; overflow-x: auto; padding: 12px 14px 0; border-bottom: 1px solid var(--tpl-borda); background: #f5efe4; }
 .tpl-abas-nav button { display: flex; gap: 10px; margin: 0 5px; padding: 15px 18px 14px; border: 0; border-bottom: 3px solid transparent; border-radius: 12px 12px 0 0; background: transparent; color: #52616a; font: 600 14px/1.25 Arial, sans-serif; white-space: nowrap; cursor: pointer; }
-.tpl-abas-nav button span { color: #a27b3b; font-size: 11px; }
+.tpl-aba-numero { color: #a27b3b; font-size: 11px; letter-spacing: .08em; }
 .tpl-abas-nav button[aria-selected="true"] { border-bottom-color: var(--tpl-destaque); background: #fff; color: var(--tpl-principal); }
 .tpl-abas-painel { min-height: 150px; padding: 28px 32px; color: #514b43; font: 16px/1.8 Georgia, "Times New Roman", serif; }
-.tpl-aba-item + .tpl-aba-item { margin-top: 22px; }
-.tpl-aba-item h3 { margin: 0 0 6px; font: 700 17px/1.4 Georgia, "Times New Roman", serif; color: var(--tpl-principal); }
-.tpl-aba-item h3 span { color: var(--tpl-destaque); }
-.tpl-aba-item p { margin: 0 0 8px; }
-.tpl-aba-item ul, .tpl-aba-item ol { margin: 0 0 8px; padding-left: 22px; }
-.tpl-aba-item a { color: var(--tpl-principal); text-decoration: underline; }
+.tpl-aba-conteudo { color: #514b43; font: 16px/1.8 Georgia, "Times New Roman", serif; }
+.tpl-aba-conteudo > :first-child { margin-top: 0; }
+.tpl-aba-conteudo h2, .tpl-aba-conteudo h3, .tpl-aba-conteudo h4 { margin: 18px 0 6px; color: var(--tpl-principal); font-family: Georgia, "Times New Roman", serif; line-height: 1.4; }
+.tpl-aba-conteudo h3 { font-size: 17px; }
+.tpl-aba-conteudo p { margin: 0 0 8px; }
+.tpl-aba-conteudo ul, .tpl-aba-conteudo ol { margin: 0 0 8px; padding-left: 22px; }
+.tpl-aba-conteudo a { color: var(--tpl-principal); text-decoration: underline; }
+.tpl-abas-sanfona details, .tpl-abas-lista section { border-top: 1px solid var(--tpl-borda); }
+.tpl-abas-sanfona details:first-child, .tpl-abas-lista section:first-child { border-top: 0; }
+.tpl-aba-titulo { display: flex; gap: 10px; align-items: center; margin: 0; padding: 18px 24px; color: var(--tpl-principal); font: 700 16px/1.3 Arial, sans-serif; cursor: pointer; }
+.tpl-abas-lista .tpl-aba-titulo { cursor: default; }
+.tpl-abas-sanfona .tpl-aba-conteudo, .tpl-abas-lista .tpl-aba-conteudo { padding: 0 24px 22px; }
+.tpl-resumo > :last-child { margin-bottom: 0; }
 .tpl-barra-fixa { flex-wrap: wrap; justify-content: center; padding: 12px 20px; border-radius: 12px; background: var(--tpl-principal); color: #fff; }
 .tpl-barra-fixa small { flex: 0 0 100%; text-align: center; opacity: .7; font-size: 11px; }
 .tpl-barra-fixa strong { font-size: 22px; }
