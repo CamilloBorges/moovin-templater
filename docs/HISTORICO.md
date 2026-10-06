@@ -146,7 +146,7 @@ Ainda não há backend, API de templates nem renderizador da loja.
 
 ## Próximos passos
 
-1. **Implantar (Camillo):** serviço Compose no EasyPanel a partir deste repositório e domínio pelo túnel da Cloudflare apontando para `app:3001`. O caminho `/loja/*` precisa ficar **público** (sem Cloudflare Access), porque a loja o carrega no navegador do cliente.
+1. **Implantar (Camillo):** serviço Compose no EasyPanel a partir deste repositório e domínio **`templater.bomgado.net`** pelo túnel da Cloudflare apontando para `app:3001`. **Decisão de 06/10:** sem Cloudflare Access; o painel fica protegido só pelo login da Moovin. O caminho `/loja/*` precisa ficar **público** (sem Cloudflare Access), porque a loja o carrega no navegador do cliente.
 2. Entrar no painel publicado com o login da Moovin e publicar o template padrão.
 3. Trocar o `Script_Produto` da Moovin para o tipo **URL** (`https://<domínio>/loja/<id da loja>/produto.js`) e testar no shoptest.
 4. Primeiro "Salvar na Moovin" pelo Camillo (os Cubos), convertendo a descrição para a convenção nova.
