@@ -1,6 +1,8 @@
 // Configuração do servidor, por variáveis de ambiente.
 export const config = {
   porta: Number(process.env.PORTA ?? 3001),
+  // No contêiner, HOST=0.0.0.0 para o proxy do EasyPanel alcançar o servidor.
+  host: process.env.HOST ?? "127.0.0.1",
   // A mesma API que o painel da Moovin usa (store.moovin.app/api repassa para ela).
   moovinApi: (process.env.MOOVIN_API ?? "https://api.moovin.app").replace(/\/$/, ""),
   // Sem MONGO_URL, o servidor sobe um MongoDB local de desenvolvimento (mongodb-memory-server).

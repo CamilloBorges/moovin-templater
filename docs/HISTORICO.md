@@ -132,10 +132,22 @@ Ainda não há backend, API de templates nem renderizador da loja.
   - preços por tabela de preço (a Moovin só mostra esses campos quando a loja tem uma tabela "por produto"; os Cubos não tinham em 02/10);
   - atributos e características reais da loja (nenhum conhecido).
 
+## Fase 5 — Login da Moovin, renderizador e implantação (05 e 06/10/2026)
+
+- **05/10:**
+  - servidor Fastify com o login da Moovin (sessão no MongoDB, cookie HttpOnly) e repasse para `api.moovin.app`;
+  - telas ligadas à Moovin;
+  - Complemento gravado **na descrição do produto**;
+  - **renderizador da loja** (`src/loja`, commit `48e64b7`): script IIFE servido em `GET /loja/<conta>/produto.js`, junto com o template publicado. Na dúvida, a página fica no layout nativo.
+- **06/10, preparo do deploy no EasyPanel:**
+  - `Dockerfile` e `docker-compose.yml` (app + `mongo:7` com volume);
+  - em produção, o servidor entrega também o painel (`dist/`, via `@fastify/static`) e escuta em `HOST=0.0.0.0`;
+  - testado localmente: o painel responde 200, a API sem sessão responde 401 e o `/loja` responde sem template.
+
 ## Próximos passos
 
-1. **Backend e integração com a Moovin:** guardar `app_id`/`app_secret` no servidor; ler e gravar o cadastro pela API (o modelo já tem o nome de cada campo da API em comentário); guardar o Complemento na nossa base (decidir onde: Postgres da plataforma de dados ou outro) e ligá-lo ao produto pelo id.
-2. Escrever o renderizador da loja: ler o JSON do template e montar a página reaproveitando a V3 (`row`, `addSticky` e `renderTabs`), trocando os marcadores pelos dados do Complemento.
-3. Criar a API de templates (buscar o publicado, salvar rascunho, publicar versão, rollback) e trocar o `localStorage` do editor por ela.
-4. Confirmar com a Moovin como a sessão da loja é reconhecida entre domínios (cookie, CORS) e o que o script consegue ler do produto na página.
-5. Prever fallback: se a API cair ou o template for inválido, a página fica no layout nativo.
+1. **Implantar (Camillo):** serviço Compose no EasyPanel a partir deste repositório e domínio pelo túnel da Cloudflare apontando para `app:3001`. O caminho `/loja/*` precisa ficar **público** (sem Cloudflare Access), porque a loja o carrega no navegador do cliente.
+2. Entrar no painel publicado com o login da Moovin e publicar o template padrão.
+3. Trocar o `Script_Produto` da Moovin para o tipo **URL** (`https://<domínio>/loja/<id da loja>/produto.js`) e testar no shoptest.
+4. Primeiro "Salvar na Moovin" pelo Camillo (os Cubos), convertendo a descrição para a convenção nova.
+5. Depois: converter os demais produtos; versões e rollback de template; atributos reais.

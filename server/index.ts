@@ -1,7 +1,9 @@
+import { existsSync } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 import Fastify from "fastify";
 import cookie from "@fastify/cookie";
+import fastifyStatic from "@fastify/static";
 import { conectar, sessoes, templates } from "./banco";
 import { config } from "./config";
 import { repassar } from "./moovin";
@@ -79,5 +81,9 @@ app.put<{ Params: { tipo: string }; Body: { dados?: unknown } }>("/api/templates
   return { ok: true, atualizadoEm };
 });
 
+// Em produção, o mesmo servidor entrega o painel (build do Vite em dist/). Em desenvolvimento, quem entrega é o Vite.
+const PAINEL = resolve("dist");
+if (existsSync(resolve(PAINEL, "index.html"))) await app.register(fastifyStatic, { root: PAINEL });
+
 await conectar();
-await app.listen({ port: config.porta, host: "127.0.0.1" });
+await app.listen({ port: config.porta, host: config.host });

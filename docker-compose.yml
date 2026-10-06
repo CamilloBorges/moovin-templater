@@ -1,0 +1,20 @@
+# EasyPanel (serviço Compose com fonte Git). O domínio aponta para o serviço "app", porta 3001.
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      MONGO_URL: mongodb://mongo:27017
+      MONGO_BANCO: templater
+      COOKIE_SEGURO: "1"
+    expose:
+      - "3001"
+    depends_on:
+      - mongo
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo-dados:/data/db
+volumes:
+  mongo-dados:
