@@ -11,6 +11,8 @@ import { Alternador, Campo, CampoReferencia, Numero, Secao, Texto } from "./camp
 import { SecoesComplemento } from "./Complemento";
 import { SecaoImagens } from "./Imagens";
 import { SecaoVariacoes } from "./Variacoes";
+import { EditorTexto } from "../../componentes/EditorTexto";
+import { descricaoParaIa } from "../../produtos/descricao";
 
 const LOJA = "https://shoptest.bomgado.com";
 
@@ -82,7 +84,8 @@ function FormularioProduto({ original, catalogo, avisoInicial, recarregar }: {
   recarregar: (mensagem: string) => void;
 }) {
   const salvo = original.cadastro;
-  const [produto, setProduto] = useState(salvo);
+  // Produto ainda com o Complemento na descrição da Moovin: já começa com o texto para a IA gerado.
+  const [produto, setProduto] = useState(() => (original.migrar ? { ...salvo, descricao: descricaoParaIa(salvo) } : salvo));
   const [mostrarErros, setMostrarErros] = useState(false);
   const [previa, setPrevia] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -97,7 +100,7 @@ function FormularioProduto({ original, catalogo, avisoInicial, recarregar }: {
 
   const erros = validar(produto);
   const errosVisiveis = mostrarErros ? erros : {};
-  const alterado = JSON.stringify(produto) !== JSON.stringify(salvo);
+  const alterado = original.migrar || JSON.stringify(produto) !== JSON.stringify(salvo);
   const unica = produto.variacoes[0];
   const precoEfetivo = unica.preco.promocional || unica.preco.venda;
   const lucro = precoEfetivo - unica.preco.custo;
@@ -166,7 +169,18 @@ function FormularioProduto({ original, catalogo, avisoInicial, recarregar }: {
           <Campo rotulo="Nome do produto" obrigatorio logus erro={errosVisiveis.nome}>
             <Texto valor={produto.nome} aoMudar={(nome) => alterar({ nome })} />
           </Campo>
-          <p className="campo-dica">A descrição do produto é montada pelas seções de resumo e abas, no fim desta página.</p>
+          <Campo rotulo="Descrição para a IA de atendimento (descrição na Moovin)">
+            <EditorTexto valor={produto.descricao} aoMudar={(descricao) => alterar({ descricao })} />
+          </Campo>
+          <div className="linha-acoes">
+            <small className="campo-dica">
+              Lida pela IA do Moovin Desk e pelos feeds. Gerada a partir do Complemento (fim desta página), só com o que a Moovin não
+              tem nos outros campos; pode ser ajustada à mão. Não é mostrada na página da loja.
+            </small>
+            <button type="button" className="button button-secondary" onClick={() => { alterar({ descricao: descricaoParaIa(produto) }); setVersao((v) => v + 1); }}>
+              Gerar de novo
+            </button>
+          </div>
         </Secao>
 
         <Secao titulo="Organização">
@@ -314,7 +328,7 @@ function FormularioProduto({ original, catalogo, avisoInicial, recarregar }: {
         <SecoesComplemento
           complemento={produto.complemento}
           preco={precoEfetivo}
-          formatoAntigo={original.formatoAntigo && JSON.stringify(produto.complemento) === JSON.stringify(salvo.complemento)}
+          migrar={original.migrar}
           aoMudar={(complemento) => alterar({ complemento })}
         />
 

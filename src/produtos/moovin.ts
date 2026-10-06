@@ -1,9 +1,11 @@
 import { api, ErroApi } from "../api";
-import { lerDescricao, montarDescricao } from "./descricao";
+import { complementoDaDescricao } from "./descricao";
+import type { ComplementoProduto } from "../templater/produto";
 import type { Imagem, ProdutoCadastro, Referencia, Variacao } from "./modelo";
 
 // Leitura e gravação do cadastro na Moovin (pelo repasse /api/moovin, com a sessão do usuário).
-// O Complemento vive na descrição do produto (ver ./descricao.ts). Formatos conferidos em 05/10/2026.
+// O Complemento fica no nosso servidor (/api/complementos); a descrição da Moovin é o texto para a IA.
+// Formatos conferidos em 05/10/2026.
 
 type RefApi = { id: string; label?: string } | null;
 type VariacaoApi = {
@@ -52,19 +54,21 @@ export type Original = {
   seo: SeoApi | null;
   estoques: Record<string, EstoqueApi | null>;
   cadastro: ProdutoCadastro;
-  formatoAntigo: boolean; // descrição ainda no formato MODO NOVO / @ do Script_Produto V3
+  // Produto sem Complemento no nosso servidor: ele foi lido da descrição da Moovin e é gravado
+  // lá no primeiro salvamento, junto com o texto para a IA no lugar da descrição.
+  migrar: boolean;
 };
 
 export async function carregarProduto(id: string): Promise<Original> {
   const produto = await api<ProdutoApi>(`moovin/oms-product/product/${id}`);
   const skus = produto.variations.map((v) => v.sku);
   const urn = produto.groups[0]?.urn ?? "";
-  const [precos, estoques, seo] = await Promise.all([
+  const [precos, estoques, seo, salvo] = await Promise.all([
     Promise.all(skus.map((sku) => ouNulo(api<PrecoApi>(`moovin/oms-pricing/price/${encodeURIComponent(sku)}`)))),
     Promise.all(skus.map((sku) => ouNulo(api<EstoqueApi>(`moovin/oms-inventory/stock/${encodeURIComponent(sku)}`)))),
     urn ? ouNulo(api<SeoApi>(`moovin/eco-seo/endpoint/${encodeURIComponent(urn)}`)) : Promise.resolve(null),
+    ouNulo(api<{ dados: ComplementoProduto }>(`complementos/${id}`)),
   ]);
-  const leitura = lerDescricao(produto.description ?? "");
   const atributos = produto.variationTemplate?.attributes ?? [];
   const cadastro: ProdutoCadastro = {
     id: produto.id,
@@ -92,9 +96,9 @@ export async function carregarProduto(id: string): Promise<Original> {
     caracteristicas: Object.fromEntries(produto.specifications.map((s) => [s.specification.id, s.value])),
     seo: { titulo: seo?.title ?? "", url: urn, descricao: seo?.metadata.find((m) => m.name === "description")?.content ?? "" },
     visivelApenasPorLink: produto.visibleOnlyByLink,
-    complemento: leitura.complemento,
+    complemento: salvo ? salvo.dados : complementoDaDescricao(produto.description ?? ""),
   };
-  return { api: produto, seo, estoques: Object.fromEntries(skus.map((s, i) => [s, estoques[i]])), cadastro, formatoAntigo: leitura.formatoAntigo };
+  return { api: produto, seo, estoques: Object.fromEntries(skus.map((s, i) => [s, estoques[i]])), cadastro, migrar: !salvo };
 }
 
 const mesmo = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
@@ -105,11 +109,17 @@ export async function salvarProduto(original: Original, p: ProdutoCadastro): Pro
   const feito: string[] = [];
   const caminho = `moovin/oms-product/product/${p.id}`;
 
-  // 1. Dados gerais do produto
+  // 1. Complemento, no nosso servidor (com os SKUs, que a página da loja usa para achá-lo)
+  const skus = p.variacoes.map((v) => v.sku);
+  if (original.migrar || !mesmo(p.complemento, o.complemento) || !mesmo(skus, o.variacoes.map((v) => v.sku))) {
+    await api(`complementos/${p.id}`, { metodo: "PUT", corpo: { dados: p.complemento, skus } });
+    feito.push("complemento");
+  }
+
+  // 2. Dados gerais do produto
   const geral: Record<string, unknown> = {};
   if (p.nome !== o.nome) geral.title = p.nome;
-  // A descrição é montada a partir do Complemento; só é reescrita quando ele muda.
-  if (!mesmo(p.complemento, o.complemento)) geral.description = montarDescricao(p.complemento);
+  if (p.descricao !== o.descricao) geral.description = p.descricao; // texto para a IA
   if (p.ativo !== o.ativo) geral.active = p.ativo;
   if (p.visivelApenasPorLink !== o.visivelApenasPorLink) geral.visibleOnlyByLink = p.visivelApenasPorLink;
   if (p.video !== o.video) geral.video = p.video || null;
@@ -126,7 +136,7 @@ export async function salvarProduto(original: Original, p: ProdutoCadastro): Pro
     feito.push("dados do produto");
   }
 
-  // 2. Variações: cadastro, preço e estoque (cada SKU no seu serviço)
+  // 3. Variações: cadastro, preço e estoque (cada SKU no seu serviço)
   for (const v of p.variacoes) {
     const antes = o.variacoes.find((x) => x.sku === v.sku);
     const sku = encodeURIComponent(v.sku);
@@ -162,7 +172,7 @@ export async function salvarProduto(original: Original, p: ProdutoCadastro): Pro
     }
   }
 
-  // 3. SEO (endpoint da URL do produto)
+  // 4. SEO (endpoint da URL do produto)
   if (p.urn && (p.seo.titulo !== o.seo.titulo || p.seo.descricao !== o.seo.descricao)) {
     const atual = original.seo;
     await api(`moovin/eco-seo/endpoint/${encodeURIComponent(p.urn)}`, {

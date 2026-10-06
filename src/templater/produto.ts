@@ -2,7 +2,7 @@ import type { ProdutoCadastro } from "../produtos/modelo";
 
 // Dados que os blocos do template consomem.
 // `moovin` é o recorte do cadastro que a página usa; `complemento` são os campos adicionais
-// do Complemento do cadastro (na loja de hoje vêm dos marcadores na descrição, ver docs/HISTORICO.md).
+// do Complemento do cadastro, guardados no nosso servidor (MongoDB).
 
 export type UnidadeConteudo = "g" | "kg" | "ml" | "l" | "un";
 
@@ -14,9 +14,11 @@ export type ProdutoMoovin = {
   avaliacao: { nota: number; total: number } | null;
 };
 
+// Guardado no nosso servidor (MongoDB), não na Moovin: só o que a Moovin não tem.
 export type ComplementoProduto = {
   conteudoComercial: { quantidade: number; unidade: UnidadeConteudo } | null;
   resumo: string; // HTML
+  descricao: string; // HTML: a descrição exibida na página (a da Moovin é o texto para a IA)
   // Abas do produto, quantas forem necessárias. O template decide onde e como aparecem.
   abas: Aba[];
 };

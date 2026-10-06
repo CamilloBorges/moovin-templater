@@ -1,4 +1,3 @@
-import { lerDescricao } from "../produtos/descricao";
 import type { EstadoCompra, LigacaoLoja } from "../templater/blocos";
 import type { ProdutoTemplate } from "../templater/produto";
 
@@ -49,7 +48,12 @@ export function temEscolhaDeVariacao(n: Nativo): boolean {
   return preco.querySelectorAll("button, select, [role=radio]").length > 0;
 }
 
-export function extrairProduto(n: Nativo): ProdutoTemplate {
+// SKU que a página mostra ("Cod.: 13925"): é a chave do Complemento no nosso servidor.
+export function lerCodigo(n: Nativo): string {
+  return /Cod\.?\s*:\s*(\S+)/i.exec(texto(n.info.children[0]))?.[1] ?? "";
+}
+
+export function extrairProduto(n: Nativo, complemento: ProdutoTemplate["complemento"]): ProdutoTemplate {
   const cabecalho = n.info.children[0];
   const vistos = new Set<string>();
   const imagens = Array.from(n.galeria.querySelectorAll("img"))
@@ -61,16 +65,15 @@ export function extrairProduto(n: Nativo): ProdutoTemplate {
       return true;
     });
   const avaliacoes = /\((\d+)\)/.exec(texto(cabecalho));
-  const corpo = n.descricao?.querySelector(".disable-preflight");
   return {
     moovin: {
       nome: texto(cabecalho.querySelector("h1")),
-      codigo: /Cod\.?\s*:\s*(\S+)/i.exec(texto(cabecalho))?.[1] ?? "",
+      codigo: lerCodigo(n),
       preco: lerPreco(n.info.children[1].querySelector("b") ?? n.info.children[1]),
       imagens,
       avaliacao: avaliacoes ? { nota: 0, total: Number(avaliacoes[1]) } : null,
     },
-    complemento: lerDescricao(corpo?.innerHTML ?? "").complemento,
+    complemento,
   };
 }
 

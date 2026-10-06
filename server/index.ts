@@ -4,13 +4,13 @@ import { resolve } from "node:path";
 import Fastify from "fastify";
 import cookie from "@fastify/cookie";
 import fastifyStatic from "@fastify/static";
-import { conectar, sessoes, templates } from "./banco";
+import { complementos, conectar, sessoes, templates } from "./banco";
 import { config } from "./config";
 import { repassar } from "./moovin";
 import { exigirSessao, rotasSessao } from "./sessao";
 
 // Servidor do painel: login com a Moovin, repasse das chamadas à API com o token do usuário
-// e os templates no MongoDB. O Complemento do cadastro fica na descrição do produto, na Moovin.
+// e, no MongoDB, os templates e o Complemento de cada produto (o que a Moovin não tem).
 
 const app = Fastify({ logger: { level: "info", redact: ["req.headers.cookie", "req.headers.authorization"] } });
 await app.register(cookie);
@@ -56,6 +56,34 @@ app.get<{ Params: { conta: string } }>("/loja/:conta/produto.js", async (pedido,
   const doc = await templates().findOne({ conta: pedido.params.conta, tipo: "publicado" });
   if (!doc) return "/* templater: nenhum template publicado */";
   return `window.__TEMPLATER_BOMGADO__=${JSON.stringify({ template: doc.dados, publicadoEm: doc.atualizadoEm })};\n${await codigoDaLoja()}`;
+});
+
+// Complemento do produto para a página da loja, público, achado pelo SKU que a página mostra.
+app.get<{ Params: { conta: string; sku: string } }>("/loja/:conta/complemento/:sku", async (pedido, resposta) => {
+  resposta.header("cache-control", "public, max-age=60").header("access-control-allow-origin", "*");
+  const doc = await complementos().findOne({ conta: pedido.params.conta, skus: pedido.params.sku });
+  return doc ? { complemento: doc.dados } : resposta.code(404).send({ erro: "Sem complemento." });
+});
+
+// Complemento do produto no painel (por id do produto na Moovin).
+app.get<{ Params: { produto: string } }>("/api/complementos/:produto", { preHandler: exigirSessao }, async (pedido, resposta) => {
+  const doc = await complementos().findOne({ _id: `${pedido.sessao!.conta!.id}:${pedido.params.produto}` });
+  return doc ? { dados: doc.dados, atualizadoEm: doc.atualizadoEm, atualizadoPor: doc.atualizadoPor } : resposta.code(404).send({ erro: "Sem complemento." });
+});
+
+app.put<{ Params: { produto: string }; Body: { dados?: unknown; skus?: unknown } }>("/api/complementos/:produto", { preHandler: exigirSessao }, async (pedido, resposta) => {
+  const { dados, skus } = pedido.body ?? {};
+  if (!dados || typeof dados !== "object" || !Array.isArray(skus) || !skus.every((s) => typeof s === "string"))
+    return resposta.code(400).send({ erro: "Complemento inválido." });
+  const conta = pedido.sessao!.conta!.id;
+  const produtoId = pedido.params.produto;
+  const atualizadoEm = new Date();
+  await complementos().updateOne(
+    { _id: `${conta}:${produtoId}` },
+    { $set: { conta, produtoId, skus, dados, atualizadoEm, atualizadoPor: pedido.sessao!.usuario?.email ?? "" } },
+    { upsert: true },
+  );
+  return { ok: true, atualizadoEm };
 });
 
 // Templates da loja: rascunho e publicado.

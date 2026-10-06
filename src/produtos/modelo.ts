@@ -26,7 +26,7 @@ export type ProdutoCadastro = {
   urn: string; // groups[0].urn: o endereço do produto na loja (/<urn>/p) e a chave do SEO
   ativo: boolean; // active
   nome: string; // title
-  descricao: string; // description (HTML)
+  descricao: string; // description (HTML): o texto para a IA de atendimento (Moovin Desk)
   categoriaPrincipal: Referencia | null; // category
   categoriasAdicionais: Referencia[];
   marca: Referencia | null; // brand
@@ -38,7 +38,7 @@ export type ProdutoCadastro = {
   caracteristicas: Record<string, string>; // specifications: id da característica → valor
   seo: { titulo: string; url: string; descricao: string }; // eco-seo /endpoint/:urn (title e metadata description)
   visivelApenasPorLink: boolean;
-  complemento: ComplementoProduto; // guardado fora da Moovin
+  complemento: ComplementoProduto; // guardado no nosso servidor (MongoDB), fora da Moovin
 };
 
 export function novaVariacao(atributos: Record<string, string> = {}): Variacao {

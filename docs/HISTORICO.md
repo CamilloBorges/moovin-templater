@@ -144,6 +144,16 @@ Ainda não há backend, API de templates nem renderizador da loja.
   - em produção, o servidor entrega também o painel (`dist/`, via `@fastify/static`) e escuta em `HOST=0.0.0.0`;
   - testado localmente: o painel responde 200, a API sem sessão responde 401 e o `/loja` responde sem template.
 
+## Fase 6 — Complemento no MongoDB e descrição da Moovin para a IA (06/10/2026)
+
+- **Decisão do Camillo:** guardar o Complemento na descrição da Moovin era frágil (o editor de lá pode apagar trechos) e limitaria funcionalidades futuras. Agora:
+  - o **MongoDB guarda só o que a Moovin não tem**: a descrição da página, o resumo, o conteúdo comercial e as abas. Os campos padrão (preço, categoria, marca, estoque…) continuam só na Moovin;
+  - a **descrição da Moovin vira o texto para a IA** do Moovin Desk. É gerada a partir do Complemento, pode ser ajustada à mão e regerada com "Gerar de novo";
+  - **a loja acha o Complemento pelo SKU** que a página mostra ("Cod.: 13925"). Sem Complemento, a página fica no layout da Moovin.
+- Novo bloco **"Descrição do produto"** no template (grupo Complemento), incluído no layout padrão entre a área do produto e as abas.
+- **Migração:** os produtos são migrados um a um, no primeiro "Salvar na Moovin" pelo painel.
+- **Próximo, em estudo:** um MCP de consulta para a IA do Moovin Desk ler o Complemento, com as instruções do agente explicando como consultá-lo.
+
 ## Próximos passos
 
 1. **Implantar (Camillo):** serviço Compose no EasyPanel a partir deste repositório e domínio **`templater.bomgado.net`** pelo túnel da Cloudflare apontando para `app:3001`. **Decisão de 06/10:** sem Cloudflare Access; o painel fica protegido só pelo login da Moovin. O caminho `/loja/*` precisa ficar **público** (sem Cloudflare Access), porque a loja o carrega no navegador do cliente.

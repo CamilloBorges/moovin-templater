@@ -1,12 +1,10 @@
 import { useState } from "react";
-import DOMPurify from "dompurify";
 import { EditorTexto } from "../../componentes/EditorTexto";
-import { montarDescricao } from "../../produtos/descricao";
 import { precoPorUnidade, type Aba, type ComplementoProduto, type UnidadeConteudo } from "../../templater/produto";
 import { Campo, Numero, Secao, Texto } from "./campos";
 
-// Resumo, conteúdo da embalagem e abas: campos separados aqui, gravados juntos na descrição do
-// produto na Moovin (convenção em produtos/descricao.ts), onde a IA de atendimento também lê.
+// Resumo, descrição da página, conteúdo da embalagem e abas: o que a Moovin não tem.
+// Gravados no nosso servidor (MongoDB); a página da loja os busca pelo SKU.
 
 function ListaAbas({ abas, aoMudar }: { abas: Aba[]; aoMudar: (abas: Aba[]) => void }) {
   // Muda só quando a ordem muda, para os editores remontarem com o conteúdo da nova posição.
@@ -42,10 +40,10 @@ function ListaAbas({ abas, aoMudar }: { abas: Aba[]; aoMudar: (abas: Aba[]) => v
   );
 }
 
-export function SecoesComplemento({ complemento, preco, formatoAntigo, aoMudar }: {
+export function SecoesComplemento({ complemento, preco, migrar, aoMudar }: {
   complemento: ComplementoProduto;
   preco: number;
-  formatoAntigo: boolean;
+  migrar: boolean;
   aoMudar: (c: ComplementoProduto) => void;
 }) {
   const alterar = (parcial: Partial<ComplementoProduto>) => aoMudar({ ...complemento, ...parcial });
@@ -55,23 +53,26 @@ export function SecoesComplemento({ complemento, preco, formatoAntigo, aoMudar }
   return (
     <>
       <div className="divisor-complemento">
-        <h2>Descrição do produto</h2>
+        <h2>Complemento do cadastro</h2>
         <p>
-          Vira a descrição do produto na Moovin: o resumo no começo e cada aba como um Título, com o conteúdo abaixo.
-          É o texto que a página, a IA de atendimento e os feeds (Google e Meta) usam.
+          O que a página da loja mostra além dos campos da Moovin. Fica guardado no Templater (não na Moovin); a descrição
+          da Moovin recebe o texto para a IA, no topo desta página.
         </p>
       </div>
 
-      {formatoAntigo && (
+      {migrar && (
         <p className="aviso">
-          A descrição está no formato antigo (MODO NOVO / @). Ao salvar uma alteração aqui, ela é reescrita no formato novo.
-          Atenção: a loja ainda usa o Script_Produto V3, que só entende o formato antigo; até o script novo entrar no ar,
-          o produto convertido aparece com o layout padrão da Moovin.
+          Este produto ainda não tem Complemento no Templater: os campos abaixo foram lidos da descrição da Moovin. Ao salvar,
+          eles passam para o Templater e a descrição da Moovin é trocada pelo texto para a IA. Confira antes de salvar.
         </p>
       )}
 
       <Secao titulo="Resumo do produto" descricao="Texto curto exibido ao lado das imagens.">
         <EditorTexto valor={complemento.resumo} titulos={false} aoMudar={(resumo) => alterar({ resumo })} />
+      </Secao>
+
+      <Secao titulo="Descrição do produto" descricao="Texto principal da página da loja.">
+        <EditorTexto valor={complemento.descricao} aoMudar={(descricao) => alterar({ descricao })} />
       </Secao>
 
       <Secao titulo="Conteúdo comercial" descricao="Quanto vem em cada unidade vendida. Usado para mostrar o preço por kg, litro ou unidade.">
@@ -119,10 +120,6 @@ export function SecoesComplemento({ complemento, preco, formatoAntigo, aoMudar }
         <ListaAbas abas={complemento.abas} aoMudar={(abas) => alterar({ abas })} />
       </Secao>
 
-      <details className="secao previa-descricao">
-        <summary>Ver a descrição como ela fica na Moovin</summary>
-        <div className="tpl-aba-conteudo" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(montarDescricao(complemento)) }} />
-      </details>
     </>
   );
 }

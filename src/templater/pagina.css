@@ -20,6 +20,7 @@
 .tpl-compra .tpl-comprar { flex: 1; text-align: center; }
 .tpl-preco-unidade { margin: 0; text-align: right; font: 600 15px/1.4 Arial, sans-serif; }
 .tpl-detalhes { margin-bottom: 30px; }
+.tpl-descricao { padding: 28px 32px; border: 1px solid var(--tpl-borda); border-radius: 20px; background: #fff; box-shadow: var(--tpl-sombra); color: #514b43; font: 16px/1.8 Georgia, "Times New Roman", serif; }
 .tpl-sobretitulo { display: block; margin-bottom: 8px; color: #a27b3b; font: 700 11px/1.4 Arial, sans-serif; letter-spacing: .16em; }
 .tpl-detalhes h2 { margin: 0 0 22px; font: 700 30px/1.2 Georgia, "Times New Roman", serif; }
 .tpl-abas { overflow: hidden; border: 1px solid var(--tpl-borda); border-radius: 20px; background: #fff; box-shadow: var(--tpl-sombra); }

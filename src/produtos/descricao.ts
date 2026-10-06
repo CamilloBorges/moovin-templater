@@ -1,12 +1,12 @@
+import type { ProdutoCadastro } from "./modelo";
 import type { Aba, ComplementoProduto, UnidadeConteudo } from "../templater/produto";
 
-// O Complemento do cadastro vive dentro da descrição do produto na Moovin, para que a IA de
-// atendimento (Moovin Desk), os feeds e qualquer pessoa leiam tudo num lugar só. Convenção:
-//   - tudo antes do primeiro Título (h2) é o resumo;
-//   - uma linha "Conteúdo da embalagem: 500 g" antes do primeiro Título alimenta o preço por kg/L/un;
-//   - cada Título (h2) abre uma aba; o texto do título é o nome dela e o que vem depois, até o
-//     próximo h2, é o conteúdo (subtítulos h3/h4, listas, imagens…).
-// A convenção usa só o que o editor da Moovin preserva, então sobrevive a edições feitas lá.
+// Desde 06/10/2026 o Complemento fica no nosso servidor (MongoDB), e a descrição da Moovin guarda
+// um texto para a IA de atendimento (Moovin Desk), gerado aqui e ajustável na tela.
+// A leitura da descrição continua só para migrar produtos que ainda têm o Complemento nela:
+//   - formato do Script_Produto V3 (MODO NOVO / @ Aba);
+//   - convenção de 05/10: resumo antes do primeiro Título (h2), linha "Conteúdo da embalagem: 500 g"
+//     e cada Título como uma aba.
 
 const UNIDADES: Record<string, UnidadeConteudo> = { g: "g", kg: "kg", ml: "ml", l: "l", un: "un" };
 const LINHA_CONTEUDO = /^\s*conte[uú]do (?:da embalagem|comercial)\s*:\s*([\d.,]+)\s*(kg|g|ml|l|un)\b/i;
@@ -24,9 +24,9 @@ function formatarQuantidade(q: number) {
   return q.toLocaleString("pt-BR", { maximumFractionDigits: 3 });
 }
 
-// Campos → HTML da descrição.
-export function montarDescricao(c: ComplementoProduto): string {
-  const partes = [c.resumo.trim()];
+// Campos → HTML corrido (resumo, descrição, conteúdo e abas).
+function montarTexto(c: ComplementoProduto): string {
+  const partes = [c.resumo.trim(), c.descricao.trim()];
   if (c.conteudoComercial) {
     const unidade = c.conteudoComercial.unidade === "l" ? "L" : c.conteudoComercial.unidade;
     partes.push(`<p><strong>Conteúdo da embalagem:</strong> ${formatarQuantidade(c.conteudoComercial.quantidade)} ${unidade}</p>`);
@@ -42,7 +42,7 @@ export function montarDescricao(c: ComplementoProduto): string {
 
 // Formato antigo do Script_Produto V3: MODO NOVO / RESUMO DO PRODUTO / DETALHES DO PRODUTO / @ Aba.
 function lerFormatoAntigo(blocos: Element[]): ComplementoProduto {
-  const c: ComplementoProduto = { conteudoComercial: null, resumo: "", abas: [] };
+  const c: ComplementoProduto = { conteudoComercial: null, resumo: "", descricao: "", abas: [] };
   let parte: "inicio" | "resumo" | "detalhes" = "inicio";
   let atual: Aba | null = null;
   const soltos: string[] = []; // conteúdo de DETALHES antes da primeira aba
@@ -69,15 +69,23 @@ function lerFormatoAntigo(blocos: Element[]): ComplementoProduto {
   return c;
 }
 
-export type Leitura = { complemento: ComplementoProduto; formatoAntigo: boolean };
+export const complementoVazio = (): ComplementoProduto => ({ conteudoComercial: null, resumo: "", descricao: "", abas: [] });
+
+// Migração: Complemento a partir da descrição da Moovin. Descrição comum (sem a convenção)
+// vira a descrição da página, sem resumo nem abas.
+export function complementoDaDescricao(html: string): ComplementoProduto {
+  const { complemento, formatoAntigo } = lerDescricao(html);
+  if (formatoAntigo || complemento.abas.length || complemento.conteudoComercial) return complemento;
+  return { ...complementoVazio(), descricao: html.trim() };
+}
 
 // HTML da descrição → campos.
-export function lerDescricao(html: string): Leitura {
+function lerDescricao(html: string): { complemento: ComplementoProduto; formatoAntigo: boolean } {
   const doc = new DOMParser().parseFromString(`<body>${html}</body>`, "text/html");
   const blocos = Array.from(doc.body.children);
   if (blocos.some((el) => texto(el).toUpperCase() === "MODO NOVO")) return { complemento: lerFormatoAntigo(blocos), formatoAntigo: true };
 
-  const c: ComplementoProduto = { conteudoComercial: null, resumo: "", abas: [] };
+  const c: ComplementoProduto = { conteudoComercial: null, resumo: "", descricao: "", abas: [] };
   let atual: Aba | null = null;
   for (const el of blocos) {
     if (el.tagName === "H2") {
@@ -92,4 +100,11 @@ export function lerDescricao(html: string): Leitura {
     }
   }
   return { complemento: c, formatoAntigo: false };
+}
+
+// Texto para a IA de atendimento (descrição da Moovin): só o que a Moovin não tem nos outros
+// campos (preço, categoria e estoque ela já conhece), sem imagens nem enfeites.
+export function descricaoParaIa(p: ProdutoCadastro): string {
+  const corpo = montarTexto(p.complemento).replace(/<img\b[^>]*>/gi, "").replace(/<(\/?)(?:span|mark|u|sub|sup)\b[^>]*>/gi, "");
+  return `<p><strong>${escapar(p.nome)}</strong></p>${corpo}`;
 }

@@ -48,6 +48,7 @@ export const templatePadrao: TemplateData = {
         ],
       },
     },
+    { type: "Descricao", props: { id: "descricao", sobretitulo: "", titulo: "Descrição" } },
     {
       type: "AbasDetalhes",
       props: {

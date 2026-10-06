@@ -79,6 +79,7 @@ a { color: inherit; text-decoration: none; }
 .campo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .campo-rotulo { font-size: 12px; font-weight: 600; color: #4a5550; display: flex; align-items: center; gap: 6px; }
 .campo-dica { color: var(--muted); font-size: 11px; }
+.linha-acoes { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; }
 .campo-erro { color: #c0473a; font-size: 11px; }
 .campo.com-erro .entrada, tr.com-erro .entrada { border-color: #e2a39b; }
 .entrada { width: 100%; height: 36px; padding: 0 10px; border: 1px solid #dfe6e2; border-radius: 6px; background: #fff; color: var(--ink); font-size: 13px; outline: none; }

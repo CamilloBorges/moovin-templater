@@ -19,6 +19,11 @@ export type Sessao = {
 
 export type DocTemplate = { _id: string; conta: string; tipo: "rascunho" | "publicado"; dados: unknown; atualizadoEm: Date; atualizadoPor: string };
 
+// O que a Moovin não tem, por produto: a descrição da página e os dados adicionais (resumo,
+// conteúdo comercial e abas). Os campos padrão (preço, categoria, estoque…) ficam só na Moovin,
+// e a descrição da Moovin guarda o texto para a IA de atendimento. A loja acha o produto pelo SKU.
+export type DocComplemento = { _id: string; conta: string; produtoId: string; skus: string[]; dados: unknown; atualizadoEm: Date; atualizadoPor: string };
+
 let db: Db;
 
 export async function conectar() {
@@ -37,7 +42,9 @@ export async function conectar() {
   db = cliente.db(config.mongoBanco);
   await sessoes().createIndex({ expiraEm: 1 }, { expireAfterSeconds: 0 });
   await templates().createIndex({ conta: 1, tipo: 1 }, { unique: true });
+  await complementos().createIndex({ conta: 1, skus: 1 });
 }
 
 export const sessoes = (): Collection<Sessao> => db.collection<Sessao>("sessoes");
 export const templates = (): Collection<DocTemplate> => db.collection<DocTemplate>("templates");
+export const complementos = (): Collection<DocComplemento> => db.collection<DocComplemento>("complementos");

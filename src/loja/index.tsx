@@ -1,14 +1,16 @@
 import { createRoot, type Root } from "react-dom/client";
 import css from "../templater/pagina.css?inline";
 import type { TemplateData } from "../templater/padrao";
-import { criarLigacao, encontrar, extrairProduto, temEscolhaDeVariacao } from "./nativo";
+import type { ComplementoProduto } from "../templater/produto";
+import { criarLigacao, encontrar, extrairProduto, lerCodigo, temEscolhaDeVariacao } from "./nativo";
 import { Pagina } from "./Pagina";
 
 // Script da página de produto, servido pelo nosso servidor (/loja/<conta>/produto.js) e
 // carregado pela Moovin como script do tipo URL. O servidor coloca o template publicado em
-// window.__TEMPLATER_BOMGADO__ antes deste código.
-// Regra de segurança: na dúvida, não mexe. Sem template, sem a estrutura esperada ou com
-// variação a escolher, a página fica como a Moovin a monta.
+// window.__TEMPLATER_BOMGADO__ antes deste código. O Complemento do produto (descrição, resumo,
+// conteúdo e abas) vem do mesmo servidor, pelo SKU: /loja/<conta>/complemento/<sku>.
+// Regra de segurança: na dúvida, não mexe. Sem template, sem Complemento, sem a estrutura
+// esperada ou com variação a escolher, a página fica como a Moovin a monta.
 
 declare global {
   interface Window {
@@ -18,6 +20,23 @@ declare global {
 }
 
 const OCULTO = "data-templater-oculto";
+// Endereço da loja no nosso servidor, tirado do próprio script (…/loja/<conta>/produto.js).
+const BASE = ((document.currentScript as HTMLScriptElement | null)?.src ?? "").replace(/\/produto\.js(\?.*)?$/, "");
+
+// Complemento do produto aberto: undefined = buscando; null = não tem (layout da Moovin).
+let busca: { chave: string; complemento: ComplementoProduto | null | undefined } | null = null;
+function complementoDe(sku: string, aoChegar: () => void): ComplementoProduto | null | undefined {
+  const chave = `${location.pathname}|${sku}`;
+  if (busca?.chave === chave) return busca.complemento;
+  const atual: NonNullable<typeof busca> = { chave, complemento: undefined };
+  busca = atual;
+  fetch(`${BASE}/complemento/${encodeURIComponent(sku)}`)
+    .then((r) => (r.ok ? r.json() : null))
+    .then((d: { complemento?: ComplementoProduto } | null) => { atual.complemento = d?.complemento ?? null; })
+    .catch(() => { atual.complemento = null; })
+    .finally(aoChegar);
+  return undefined;
+}
 type Montagem = { caminho: string; raiz: Root; container: HTMLElement; ocultos: HTMLElement[] };
 let montagem: Montagem | null = null;
 
@@ -29,14 +48,18 @@ function desmontar() {
   montagem = null;
 }
 
-function sincronizar(template: TemplateData) {
+function sincronizar(template: TemplateData, agendar: () => void) {
   const naPaginaDeProduto = /\/p\/?$/.test(location.pathname);
   if (montagem && (!naPaginaDeProduto || montagem.caminho !== location.pathname || !document.contains(montagem.container))) desmontar();
   if (montagem || !naPaginaDeProduto) return;
 
   const nativo = encontrar();
   if (!nativo || temEscolhaDeVariacao(nativo)) return;
-  const produto = extrairProduto(nativo);
+  const sku = lerCodigo(nativo);
+  if (!sku || !BASE) return;
+  const complemento = complementoDe(sku, agendar);
+  if (!complemento) return;
+  const produto = extrairProduto(nativo, complemento);
   if (!produto.moovin.nome) return;
 
   const container = document.createElement("div");
@@ -67,7 +90,7 @@ function iniciar() {
     requestAnimationFrame(() => {
       agendado = false;
       try {
-        sincronizar(template);
+        sincronizar(template, agendar);
       } catch (erro) {
         console.error("[templater] erro ao montar a página; mantendo o layout da Moovin", erro);
         desmontar();

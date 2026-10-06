@@ -158,14 +158,26 @@ export function BarraCompraFixa() {
 
 export function Resumo() {
   const { resumo } = useAmbiente().produto.complemento;
-  return resumo ? <div className="tpl-resumo" dangerouslySetInnerHTML={html(resumo)} /> : <Vazio texto="Produto sem resumo na descrição" />;
+  return resumo ? <div className="tpl-resumo" dangerouslySetInnerHTML={html(resumo)} /> : <Vazio texto="Produto sem resumo no Complemento" />;
+}
+
+export function Descricao({ sobretitulo, titulo }: { sobretitulo: string; titulo: string }) {
+  const { descricao } = useAmbiente().produto.complemento;
+  if (!descricao) return <Vazio texto="Produto sem descrição no Complemento" />;
+  return (
+    <section className="tpl-detalhes">
+      {sobretitulo && <span className="tpl-sobretitulo">{sobretitulo}</span>}
+      {titulo && <h2>{titulo}</h2>}
+      <div className="tpl-descricao tpl-aba-conteudo" dangerouslySetInnerHTML={html(descricao)} />
+    </section>
+  );
 }
 
 export function PrecoPorUnidade() {
   const { complemento } = useAmbiente().produto;
   const { preco } = useCompra();
   const texto = precoPorUnidade(preco, complemento.conteudoComercial);
-  return texto ? <p className="tpl-preco-unidade">{texto}</p> : <Vazio texto="Produto sem conteúdo da embalagem na descrição" />;
+  return texto ? <p className="tpl-preco-unidade">{texto}</p> : <Vazio texto="Produto sem conteúdo da embalagem no Complemento" />;
 }
 
 type EstiloAbas = "abas" | "sanfona" | "lista";
@@ -216,7 +228,7 @@ function Abas({ abas, estilo, numerar }: { abas: Aba[]; estilo: EstiloAbas; nume
 
 export function AbasDetalhes({ sobretitulo, titulo, estilo, numerar }: { sobretitulo: string; titulo: string; estilo?: EstiloAbas; numerar: SimNao }) {
   const abas = useAmbiente().produto.complemento.abas.filter((aba) => aba.titulo || aba.conteudo);
-  if (!abas.length) return <Vazio texto="Produto sem abas na descrição" />;
+  if (!abas.length) return <Vazio texto="Produto sem abas no Complemento" />;
   return (
     <section className="tpl-detalhes">
       {sobretitulo && <span className="tpl-sobretitulo">{sobretitulo}</span>}

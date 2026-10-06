@@ -22,7 +22,9 @@ O painel só abre com uma sessão válida da Moovin, como o painel administrativ
 - O painel chama a Moovin por `/api/moovin/<serviço>/...`. O servidor repassa com o token da loja (`X-Authorization: Bearer`), só para os serviços liberados.
 - O token é revalidado na Moovin a cada 5 minutos. Se a Moovin recusar, a sessão acaba e o painel volta para o login.
 - Os templates (rascunho e publicado) ficam no MongoDB, separados pela loja (`/api/templates/:tipo`).
-- O **Complemento do cadastro fica na descrição do produto, na Moovin**, para a IA de atendimento (Moovin Desk) e os feeds lerem tudo. Convenção (`src/produtos/descricao.ts`): o que vem antes do primeiro Título (h2) é o resumo; a linha "Conteúdo da embalagem: 500 g" alimenta o preço por kg/L/un; cada Título abre uma aba. A tela mostra os campos separados e monta e lê o HTML; descrições no formato antigo (MODO NOVO / @) são lidas e convertidas ao salvar.
+- **Complemento do cadastro no MongoDB** (coleção `complementos`, por loja e produto, com os SKUs): só o que a Moovin não tem — a descrição da página, o resumo, o conteúdo comercial e as abas. Preço, categoria, marca, estoque e os demais campos padrão ficam só na Moovin. Rotas: `/api/complementos/:produto` (painel) e `/loja/<conta>/complemento/<sku>` (público, para a página da loja).
+- **A descrição da Moovin é o texto para a IA** de atendimento (Moovin Desk) e para os feeds: gerado a partir do Complemento (`descricaoParaIa`, em `src/produtos/descricao.ts`), ajustável na tela e com o botão "Gerar de novo". Não aparece na página da loja.
+- **Migração:** produto sem Complemento no MongoDB é lido da descrição da Moovin (formato MODO NOVO / @ ou a convenção de 05/10; descrição comum vira a descrição da página). No primeiro salvamento, o Complemento vai para o MongoDB e a descrição da Moovin é trocada pelo texto para a IA.
 
 ## Script da loja (página de produto)
 
