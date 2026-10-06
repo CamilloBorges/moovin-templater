@@ -11,6 +11,7 @@ import { SecoesComplemento } from "./Complemento";
 import { SecaoImagens } from "./Imagens";
 import { SecaoVariacoes } from "./Variacoes";
 import { PreviaPagina } from "../../componentes/PreviaPagina";
+import { ConteudoBadge } from "../../templater/blocos";
 import { EditorTexto } from "../../componentes/EditorTexto";
 import { descricaoParaIa } from "../../produtos/descricao";
 
@@ -68,7 +69,7 @@ function SecaoBadges({ selecionados, todos, aoMudar }: { selecionados: string[];
           {todos.map((b) => (
             <label key={b.id} className={selecionados.includes(b.id) ? "badge-opcao marcado" : "badge-opcao"} title={b.tooltip}>
               <input type="checkbox" checked={selecionados.includes(b.id)} onChange={() => alternar(b.id)} />
-              <img src={b.imagem} alt="" />
+              <ConteudoBadge badge={b} tamanho={32} />
               <span>{b.nome}</span>
               {selecionados.includes(b.id) && <b>{selecionados.indexOf(b.id) + 1}</b>}
             </label>

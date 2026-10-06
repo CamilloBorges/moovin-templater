@@ -30,8 +30,19 @@ export type ComplementoProduto = {
 
 export type Aba = { titulo: string; conteudo: string }; // conteúdo em HTML
 
-// Badge (selo) cadastrado no painel. A imagem fica na Moovin; o link, se houver, abre em outra aba.
-export type Badge = { id: string; nome: string; imagem: string; tooltip: string; link: string };
+// Badge (selo) cadastrado no painel: uma imagem (salva na Moovin) ou um ícone (SVG guardado no
+// cadastro, com cor e fundo). O link, se houver, abre em outra aba.
+export type Badge = {
+  id: string;
+  nome: string;
+  tipo: "imagem" | "icone";
+  imagem: string; // tipo imagem: endereço na Moovin
+  icone: string; // tipo ícone: SVG (Lucide), com traço em currentColor
+  cor: string; // cor do ícone (#rrggbb)
+  corFundo: string; // fundo do ícone (#rrggbb ou "transparent")
+  tooltip: string;
+  link: string;
+};
 
 export type ProdutoTemplate = {
   moovin: ProdutoMoovin;

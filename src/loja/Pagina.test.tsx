@@ -11,6 +11,8 @@ import { Pagina } from "./Pagina";
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 globalThis.IntersectionObserver ??= class { observe() {} disconnect() {} unobserve() {} takeRecords() { return []; } root = null; rootMargin = ""; thresholds = []; } as unknown as typeof IntersectionObserver;
 
+const badgeBase = { tipo: "imagem" as const, imagem: "", icone: "", cor: "#173a4d", corFundo: "transparent", tooltip: "", link: "" };
+
 const produto: ProdutoTemplate = {
   moovin: { nome: "Cubos de Panela", url: "https://loja.exemplo/cubos/p", codigo: "13925", preco: 39.9, imagens: ["https://exemplo/1.jpg"], avaliacao: null },
   complemento: {
@@ -21,8 +23,8 @@ const produto: ProdutoTemplate = {
     badges: ["b1", "b2"],
   },
   badges: [
-    { id: "b1", nome: "Sem glúten", imagem: "https://exemplo/sg.png", tooltip: "Produto sem glúten", link: "https://loja.exemplo/sem-gluten" },
-    { id: "b2", nome: "Grass fed", imagem: "https://exemplo/gf.png", tooltip: "", link: "" },
+    { ...badgeBase, id: "b1", nome: "Sem glúten", imagem: "https://exemplo/sg.png", tooltip: "Produto sem glúten", link: "https://loja.exemplo/sem-gluten" },
+    { ...badgeBase, id: "b2", nome: "Grass fed", imagem: "https://exemplo/gf.png" },
   ],
 };
 
@@ -83,7 +85,9 @@ describe("botão compartilhar", () => {
 });
 
 describe("bloco Badges", () => {
-  const template = { root: { props: {} }, content: [{ type: "Badges", props: { id: "b", tamanho: 48 } }] } as unknown as TemplateData;
+  const comLimites = (porLinha: number, maxLinhas: number) =>
+    ({ root: { props: {} }, content: [{ type: "Badges", props: { id: "b", tamanho: 64, porLinha, maxLinhas } }] }) as unknown as TemplateData;
+  const template = comLimites(4, 2);
 
   it("badge com link abre em outra aba, com o balão do tooltip", () => {
     const link = renderizar(template).querySelector<HTMLAnchorElement>("a.tpl-badge")!;
@@ -91,7 +95,7 @@ describe("bloco Badges", () => {
     expect(link.target).toBe("_blank");
     expect(link.rel).toContain("noopener");
     expect(link.querySelector("[role=tooltip]")!.textContent).toBe("Produto sem glúten");
-    expect(link.querySelector("img")!.getAttribute("alt")).toBe("Sem glúten");
+    expect(link.getAttribute("aria-label")).toContain("Sem glúten");
   });
 
   it("badge sem link não gera link nem balão vazio", () => {
@@ -100,5 +104,42 @@ describe("bloco Badges", () => {
     expect(badges).toHaveLength(2);
     expect(badges[1].tagName).toBe("SPAN");
     expect(badges[1].querySelector("[role=tooltip]")).toBeNull();
+  });
+});
+
+describe("bloco Badges: limites e ícones", () => {
+  const varios = (n: number) => Array.from({ length: n }, (_, i) => ({ ...badgeBase, id: `x${i}`, nome: `B${i}`, imagem: `https://exemplo/${i}.png` }));
+  function montar(badges: ProdutoTemplate["badges"], porLinha: number, maxLinhas: number) {
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    raiz = createRoot(container);
+    const template = { root: { props: {} }, content: [{ type: "Badges", props: { id: "b", tamanho: 64, porLinha, maxLinhas } }] } as unknown as TemplateData;
+    act(() => raiz!.render(<Pagina template={template} produto={{ ...produto, badges }} loja={ligacaoSimulada(1)} />));
+    return container;
+  }
+
+  it("mostra no máximo badges por linha × linhas", () => {
+    const c = montar(varios(10), 3, 2);
+    expect(c.querySelectorAll(".tpl-badge")).toHaveLength(6);
+    expect(c.querySelector<HTMLElement>(".tpl-badges")!.style.gridTemplateColumns).toBe("repeat(3, 64px)");
+  });
+
+  it("tamanho menor que 64 px em template antigo sobe para 64", () => {
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    raiz = createRoot(container);
+    const antigo = { root: { props: {} }, content: [{ type: "Badges", props: { id: "b", tamanho: 48 } }] } as unknown as TemplateData;
+    act(() => raiz!.render(<Pagina template={antigo} produto={produto} loja={ligacaoSimulada(1)} />));
+    expect(container.querySelector("img")!.getAttribute("width")).toBe("64");
+  });
+
+  it("ícone: SVG com a cor e o fundo do cadastro, sem código malicioso", () => {
+    const icone = '<svg viewBox="0 0 24 24" onload="alert(1)"><path d="M1 1"/><script>alert(2)</script></svg>';
+    const c = montar([{ ...badgeBase, id: "i", nome: "Ícone", tipo: "icone", icone, cor: "#ff0000", corFundo: "#eeeeee" }], 4, 1);
+    const el = c.querySelector<HTMLElement>(".tpl-badge-icone")!;
+    expect(el.style.color).toBe("rgb(255, 0, 0)");
+    expect(el.querySelector("svg path")).not.toBeNull();
+    expect(el.innerHTML).not.toContain("script");
+    expect(el.innerHTML).not.toContain("onload");
   });
 });

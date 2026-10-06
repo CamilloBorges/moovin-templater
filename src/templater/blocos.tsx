@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import DOMPurify from "dompurify";
-import { formatarMoeda, precoPorUnidade, type Aba, type ProdutoTemplate, textoUnidade } from "./produto";
+import { formatarMoeda, precoPorUnidade, type Aba, type Badge, type ProdutoTemplate, textoUnidade } from "./produto";
 
 // Blocos da página de produto. São os mesmos componentes no editor (prévia, dentro do Puck) e na
 // loja (script servido por URL), para a prévia ficar igual à página publicada.
@@ -227,27 +227,48 @@ export function Descricao({ sobretitulo, titulo }: { sobretitulo: string; titulo
   );
 }
 
-// Badges (selos) do produto: imagem com balão ao passar o mouse (ou ao focar pelo teclado) e,
-// se o badge tiver link, abre a página de descrição completa em outra aba.
-export function Badges({ tamanho }: { tamanho: number }) {
-  const { badges } = useAmbiente().produto;
+// Imagem ou ícone do badge, no tamanho pedido. O SVG do ícone passa pelo DOMPurify (perfil SVG).
+export function ConteudoBadge({ badge, tamanho }: { badge: Badge; tamanho: number }) {
+  if (badge.tipo === "icone") {
+    return (
+      <span
+        className={badge.corFundo === "transparent" ? "tpl-badge-icone" : "tpl-badge-icone com-fundo"}
+        style={{ width: tamanho, height: tamanho, color: badge.cor, background: badge.corFundo }}
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(badge.icone, { USE_PROFILES: { svg: true } }) }}
+      />
+    );
+  }
+  return <img src={badge.imagem} alt="" width={tamanho} height={tamanho} loading="lazy" />;
+}
+
+// Badges (selos) do produto: em grade, com limite de badges por linha e de linhas (o que passar
+// não aparece). Balão ao passar o mouse (ou focar pelo teclado); com link, abre em outra aba.
+export function Badges({ tamanho, porLinha, maxLinhas }: { tamanho: number; porLinha: number; maxLinhas: number }) {
+  const { produto, editando } = useAmbiente();
+  const { badges } = produto;
   if (!badges.length) return <Vazio texto="Produto sem badges" />;
+  const visiveis = badges.slice(0, porLinha * maxLinhas);
   return (
-    <div className="tpl-badges">
-      {badges.map((b) => {
-        const imagem = <img src={b.imagem} alt={b.nome} width={tamanho} height={tamanho} loading="lazy" />;
-        const balao = b.tooltip && <span className="tpl-badge-balao" role="tooltip">{b.tooltip}</span>;
-        return b.link ? (
-          <a key={b.id} className="tpl-badge" href={b.link} target="_blank" rel="noopener noreferrer" aria-label={`${b.nome} (abre em outra aba)`}>
-            {imagem}{balao}
-          </a>
-        ) : (
-          <span key={b.id} className="tpl-badge" tabIndex={0} aria-label={b.nome}>
-            {imagem}{balao}
-          </span>
-        );
-      })}
-    </div>
+    <>
+      <div className="tpl-badges" style={{ gridTemplateColumns: `repeat(${Math.min(porLinha, visiveis.length)}, ${tamanho}px)` }}>
+        {visiveis.map((b) => {
+          const conteudo = <ConteudoBadge badge={b} tamanho={tamanho} />;
+          const balao = b.tooltip && <span className="tpl-badge-balao" role="tooltip">{b.tooltip}</span>;
+          return b.link ? (
+            <a key={b.id} className="tpl-badge" href={b.link} target="_blank" rel="noopener noreferrer" aria-label={`${b.nome} (abre em outra aba)`}>
+              {conteudo}{balao}
+            </a>
+          ) : (
+            <span key={b.id} className="tpl-badge" tabIndex={0} role="img" aria-label={b.nome}>
+              {conteudo}{balao}
+            </span>
+          );
+        })}
+      </div>
+      {editando && badges.length > visiveis.length && (
+        <div className="tpl-vazio">{badges.length - visiveis.length} badge(s) deste produto passam do limite e não aparecem</div>
+      )}
+    </>
   );
 }
 

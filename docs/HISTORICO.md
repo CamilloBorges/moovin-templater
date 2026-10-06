@@ -196,6 +196,17 @@ Ainda não há backend, API de templates nem renderizador da loja.
 - Testado no navegador com uma página temporária: remoção por cor, arraste e geração do PNG.
 - **Testes:** 54.
 
+## Fase 10 — Bloco Badges com limites e badges com ícone (06/10/2026)
+
+- **Bloco:**
+  - tamanho a partir de 64 px (64/80/96/128);
+  - badges por linha e máximo de linhas;
+  - templates antigos com 48 px sobem para 64.
+- **Badge com ícone:**
+  - Lucide (ISC), com cor e fundo;
+  - o SVG fica guardado no cadastro e é validado no servidor e sanitizado na loja.
+- Testado no navegador; 63 testes.
+
 ## Próximos passos
 
 1. **Implantar (Camillo):** serviço Compose no EasyPanel a partir deste repositório e domínio **`templater.bomgado.net`** pelo túnel da Cloudflare apontando para `app:3001`. **Decisão de 06/10:** sem Cloudflare Access; o painel fica protegido só pelo login da Moovin. O caminho `/loja/*` precisa ficar **público** (sem Cloudflare Access), porque a loja o carrega no navegador do cliente.

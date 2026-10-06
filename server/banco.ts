@@ -20,8 +20,21 @@ export type Sessao = {
 export type DocTemplate = { _id: string; conta: string; tipo: "rascunho" | "publicado"; dados: unknown; atualizadoEm: Date; atualizadoPor: string };
 
 // Badges (selos) da loja, associados aos produtos pelo Complemento (campo badges, com os ids).
-// A imagem fica na Moovin (dam-storage); aqui só o endereço dela.
-export type DocBadge = { _id: string; conta: string; nome: string; imagem: string; tooltip: string; link: string; atualizadoEm: Date; atualizadoPor: string };
+// A imagem fica na Moovin (dam-storage); aqui só o endereço dela. Ou, no lugar da imagem, um ícone (SVG).
+export type DocBadge = {
+  _id: string;
+  conta: string;
+  nome: string;
+  tipo?: "imagem" | "icone"; // badges antigos não têm: são imagem
+  imagem: string;
+  icone?: string; // SVG do ícone (tipo ícone)
+  cor?: string;
+  corFundo?: string;
+  tooltip: string;
+  link: string;
+  atualizadoEm: Date;
+  atualizadoPor: string;
+};
 
 // O que a Moovin não tem, por produto: a descrição da página e os dados adicionais (resumo,
 // conteúdo comercial, abas e badges). Os campos padrão (preço, categoria, estoque…) ficam só na Moovin,

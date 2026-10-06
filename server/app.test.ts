@@ -127,7 +127,7 @@ describe("Badges", () => {
     expect(criado.statusCode).toBe(200);
     id = criado.json().id;
     const lista = (await app.inject({ url: "/api/badges", headers: { cookie } })).json();
-    expect(lista).toEqual([{ id, ...badge }]);
+    expect(lista).toEqual([{ id, ...badge, tipo: "imagem", icone: "", cor: "#173a4d", corFundo: "transparent" }]);
     const editado = await app.inject({ method: "PUT", url: `/api/badges/${id}`, headers: { cookie }, payload: { ...badge, link: "https://loja/sg" } });
     expect(editado.json().link).toBe("https://loja/sg");
   });
@@ -171,5 +171,26 @@ describe("Editor de imagem", () => {
   it("só baixa imagens do armazenamento da Moovin", async () => {
     const r = await app.inject({ url: "/api/imagem/baixar?url=http://169.254.169.254/latest", headers: { cookie } });
     expect(r.statusCode).toBe(400);
+  });
+});
+
+describe("Badges com ícone", () => {
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M1 1"/></svg>';
+  const enviar = (payload: object) => app.inject({ method: "POST", url: "/api/badges", headers: { cookie }, payload });
+
+  it("cadastra ícone sem imagem, com cor e fundo", async () => {
+    const r = await enviar({ nome: "Fresco", tipo: "icone", icone: svg, cor: "#117950", corFundo: "transparent", tooltip: "", link: "" });
+    expect(r.statusCode).toBe(200);
+    expect(r.json()).toMatchObject({ tipo: "icone", icone: svg, imagem: "", cor: "#117950", corFundo: "transparent" });
+  });
+
+  it("recusa SVG com script, evento ou javascript:", async () => {
+    for (const icone of ['<svg><script>x</script></svg>', '<svg onload="x()"></svg>', '<svg><a href="javascript:x"/></svg>', "<div></div>"]) {
+      expect((await enviar({ nome: "X", tipo: "icone", icone })).statusCode).toBe(400);
+    }
+  });
+
+  it("recusa cor fora do formato", async () => {
+    expect((await enviar({ nome: "X", tipo: "icone", icone: svg, cor: "red;background:url(x)" })).statusCode).toBe(400);
   });
 });

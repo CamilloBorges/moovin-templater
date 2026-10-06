@@ -191,15 +191,45 @@ export async function criarApp({ log = true } = {}) {
 
 // O que sai do badge para o painel e para a loja.
 function publico(b: DocBadge) {
-  return { id: b._id, nome: b.nome, imagem: b.imagem, tooltip: b.tooltip, link: b.link };
+  return {
+    id: b._id,
+    nome: b.nome,
+    tipo: b.tipo ?? "imagem",
+    imagem: b.imagem,
+    icone: b.icone ?? "",
+    cor: b.cor ?? "#173a4d",
+    corFundo: b.corFundo ?? "transparent",
+    tooltip: b.tooltip,
+    link: b.link,
+  };
 }
 
 const URL_VALIDA = /^https?:\/\/\S+$/i;
-function validarBadge(corpo: Partial<DocBadge> | undefined): Pick<DocBadge, "nome" | "imagem" | "tooltip" | "link"> | string {
+const COR = /^(#[0-9a-f]{6}|transparent)$/i;
+type CamposBadge = Pick<DocBadge, "nome" | "imagem" | "tooltip" | "link"> & Required<Pick<DocBadge, "tipo" | "icone" | "cor" | "corFundo">>;
+
+function validarBadge(corpo: Partial<DocBadge> | undefined): CamposBadge | string {
   const texto = (v: unknown) => (typeof v === "string" ? v.trim() : "");
-  const dados = { nome: texto(corpo?.nome), imagem: texto(corpo?.imagem), tooltip: texto(corpo?.tooltip), link: texto(corpo?.link) };
+  const tipo = corpo?.tipo === "icone" ? "icone" : "imagem";
+  const dados: CamposBadge = {
+    nome: texto(corpo?.nome),
+    tipo,
+    imagem: tipo === "imagem" ? texto(corpo?.imagem) : "",
+    icone: tipo === "icone" ? texto(corpo?.icone) : "",
+    cor: texto(corpo?.cor) || "#173a4d",
+    corFundo: texto(corpo?.corFundo) || "transparent",
+    tooltip: texto(corpo?.tooltip),
+    link: texto(corpo?.link),
+  };
   if (!dados.nome) return "Informe o nome do badge.";
-  if (!URL_VALIDA.test(dados.imagem)) return "Envie a imagem do badge.";
+  if (tipo === "imagem" && !URL_VALIDA.test(dados.imagem)) return "Envie a imagem do badge.";
+  if (tipo === "icone") {
+    // SVG gerado pelo painel a partir da Lucide; recusa qualquer coisa que possa executar código.
+    const svg = dados.icone;
+    if (!/^<svg[\s>]/i.test(svg) || !/<\/svg>$/i.test(svg) || svg.length > 20_000 || /<script|\son\w+\s*=|javascript:|<foreignObject/i.test(svg))
+      return "Escolha o ícone do badge.";
+    if (!COR.test(dados.cor) || !COR.test(dados.corFundo)) return "Cor inválida.";
+  }
   if (dados.tooltip.length > 300) return "O texto do balão pode ter até 300 caracteres.";
   if (dados.link && !URL_VALIDA.test(dados.link)) return "O link precisa começar com http:// ou https://.";
   return dados;

@@ -76,6 +76,8 @@ Cadastro de selos da loja: nome, imagem, texto do balão (tooltip, até 300 cara
 - **No produto**, os badges são marcados nos Campos Complementares, na ordem de exibição. O Complemento guarda só os ids.
 - **Na loja**, o bloco "Badges" mostra as imagens com o balão ao passar o mouse (ou ao focar pelo teclado). Badge com link vira um link que abre em outra aba; sem link, não há link. A rota `/loja/<conta>/complemento/<sku>` já devolve os badges resolvidos.
 - Excluir um badge o tira de todos os produtos.
+- **Imagem ou ícone:** no lugar da imagem, o badge pode usar um ícone da [Lucide](https://lucide.dev) (licença ISC), com cor e fundo (ou sem fundo). O SVG fica no cadastro, então a loja não carrega a biblioteca; no painel ela vem sob demanda. O servidor recusa SVG com script, eventos ou `javascript:`, e a loja ainda passa o SVG pelo DOMPurify.
+- **Bloco Badges:** tamanho de 64, 80, 96 ou 128 px, badges por linha (1 a 8) e máximo de linhas (1 a 4). O que passa do limite não aparece, e o editor avisa.
 - **Editor de imagem** (`src/componentes/EditorImagem.tsx`, funções em `src/imagem/processamento.ts`): toda imagem escolhida abre no editor antes de ir para a Moovin, e a imagem atual pode ser reeditada.
   - **Remover o fundo por cor:** cor do canto ou conta-gotas, com tolerância; por padrão só o fundo ligado às bordas, preservando partes internas da mesma cor.
   - **Remover o fundo com IA:** usa o rembg (MIT), self-hosted no compose, só na rede interna, com o modelo `isnet-general-use` (Apache 2.0). Rotas `/api/imagem/recursos` e `/api/imagem/remover-fundo`; sem `REMBG_URL`, o botão some.

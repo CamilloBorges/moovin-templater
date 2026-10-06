@@ -1,20 +1,25 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { enviarImagem, excluirBadge, listarBadges, salvarBadge, type DadosBadge } from "../produtos/badges";
 import type { Badge } from "../templater/produto";
 import { Campo, Secao, Texto } from "./produtos/campos";
 import { EditorImagem } from "../componentes/EditorImagem";
+import { ConteudoBadge } from "../templater/blocos";
+import { carregarIcones, nomeLegivel, SUGERIDOS, svgDoIcone, type Icones } from "../produtos/icones";
 
-// Cadastro de badges (selos) da loja. A imagem é enviada para a Moovin; o resto fica no nosso servidor.
+// Cadastro de badges (selos) da loja: uma imagem (enviada para a Moovin) ou um ícone da Lucide
+// (o SVG fica no cadastro, com cor e fundo). O resto fica no nosso servidor.
 // Os badges são associados aos produtos nos Campos Complementares da tela do produto.
 
-const VAZIO: DadosBadge = { nome: "", imagem: "", tooltip: "", link: "" };
+const VAZIO: DadosBadge = { nome: "", tipo: "imagem", imagem: "", icone: "", cor: "#173a4d", corFundo: "#f5efe4", tooltip: "", link: "" };
 
-// O badge como aparece na página: imagem, balão ao passar o mouse e link (se houver).
+const temVisual = (b: DadosBadge) => (b.tipo === "icone" ? !!b.icone : !!b.imagem);
+
+// O badge como aparece na página: imagem ou ícone, balão ao passar o mouse e link (se houver).
 function Amostra({ badge }: { badge: DadosBadge }) {
-  if (!badge.imagem) return <span className="sem-imagem amostra-badge" />;
+  if (!temVisual(badge)) return <span className="sem-imagem amostra-badge" />;
   const conteudo = (
     <>
-      <img src={badge.imagem} alt={badge.nome} width={48} height={48} />
+      <ConteudoBadge badge={{ ...badge, id: "amostra" }} tamanho={64} />
       {badge.tooltip && <span className="tpl-badge-balao" role="tooltip">{badge.tooltip}</span>}
     </>
   );
@@ -26,6 +31,36 @@ function Amostra({ badge }: { badge: DadosBadge }) {
         <span className="tpl-badge" tabIndex={0}>{conteudo}</span>
       )}
     </span>
+  );
+}
+
+// Seletor de ícones da Lucide: sugestões da loja e busca pelo nome em inglês (ex.: "leaf", "award").
+function SeletorIcone({ selecionado, cor, escolher }: { selecionado: string; cor: string; escolher: (svg: string) => void }) {
+  const [icones, setIcones] = useState<Icones | null>(null);
+  const [busca, setBusca] = useState("");
+  useEffect(() => { carregarIcones().then(setIcones); }, []);
+  const nomes = useMemo(() => {
+    if (!icones) return [];
+    const termo = busca.trim().toLowerCase();
+    if (!termo) return SUGERIDOS.filter((n) => icones[n]);
+    return Object.keys(icones).filter((n) => nomeLegivel(n).includes(termo) || n.toLowerCase().includes(termo.replace(/\s+/g, ""))).slice(0, 120);
+  }, [icones, busca]);
+  if (!icones) return <p className="vazio">Carregando os ícones…</p>;
+  return (
+    <div className="seletor-icone">
+      <input className="entrada" placeholder="Buscar ícone em inglês: leaf, beef, award, snowflake…" value={busca} onChange={(e) => setBusca(e.target.value)} />
+      {!busca && <small className="campo-dica">Sugestões para a loja. A busca procura entre os {Object.keys(icones).length} ícones da Lucide.</small>}
+      <div className="grade-icones">
+        {nomes.map((n) => {
+          const svg = svgDoIcone(icones[n]);
+          return (
+            <button key={n} type="button" title={nomeLegivel(n)} className={svg === selecionado ? "marcado" : ""} style={{ color: cor }}
+              onClick={() => escolher(svg)} dangerouslySetInnerHTML={{ __html: svg }} />
+          );
+        })}
+        {nomes.length === 0 && <p className="vazio">Nenhum ícone encontrado.</p>}
+      </div>
+    </div>
   );
 }
 
@@ -72,13 +107,43 @@ function Formulario({ badge, fechar, salvo }: { badge: Badge | null; fechar: () 
           <Campo rotulo="Nome" obrigatorio>
             <Texto valor={dados.nome} aoMudar={(nome) => alterar({ nome })} placeholder="Ex.: Sem glúten" maxLength={80} />
           </Campo>
-          <Campo rotulo="Imagem" obrigatorio dica="Abre no editor (tirar o fundo, enquadrar e redimensionar) e fica salva na Moovin como PNG.">
-            <input type="file" accept="image/*" disabled={enviando} onChange={(e) => { const f = e.target.files?.[0]; if (f) setEditor(f); e.target.value = ""; }} />
-          </Campo>
-          {dados.imagem && (
-            <button type="button" className="button button-plain" disabled={enviando} onClick={() => setEditor(dados.imagem)}>Editar a imagem atual</button>
+          <div className="campo">
+            <span className="campo-rotulo">Visual *</span>
+            <div className="alternativas">
+              <label><input type="radio" checked={dados.tipo === "imagem"} onChange={() => alterar({ tipo: "imagem" })} /> Imagem</label>
+              <label><input type="radio" checked={dados.tipo === "icone"} onChange={() => alterar({ tipo: "icone" })} /> Ícone</label>
+            </div>
+          </div>
+          {dados.tipo === "imagem" ? (
+            <>
+              <Campo rotulo="Imagem" obrigatorio dica="Abre no editor (tirar o fundo, enquadrar e redimensionar) e fica salva na Moovin como PNG.">
+                <input type="file" accept="image/*" disabled={enviando} onChange={(e) => { const f = e.target.files?.[0]; if (f) setEditor(f); e.target.value = ""; }} />
+              </Campo>
+              {dados.imagem && (
+                <button type="button" className="button button-plain" disabled={enviando} onClick={() => setEditor(dados.imagem)}>Editar a imagem atual</button>
+              )}
+              {enviando && <small className="campo-dica">Enviando a imagem para a Moovin…</small>}
+            </>
+          ) : (
+            <>
+              <div className="linha-campos">
+                <label className="campo">
+                  <span className="campo-rotulo">Cor do ícone</span>
+                  <input type="color" value={dados.cor} onChange={(e) => alterar({ cor: e.target.value })} />
+                </label>
+                <div className="campo">
+                  <span className="campo-rotulo">Fundo</span>
+                  <span className="entrada-com-botao">
+                    <input type="color" disabled={dados.corFundo === "transparent"} value={dados.corFundo === "transparent" ? "#ffffff" : dados.corFundo} onChange={(e) => alterar({ corFundo: e.target.value })} />
+                    <label className="campo-check">
+                      <input type="checkbox" checked={dados.corFundo === "transparent"} onChange={(e) => alterar({ corFundo: e.target.checked ? "transparent" : "#f5efe4" })} /> Sem fundo
+                    </label>
+                  </span>
+                </div>
+              </div>
+              <SeletorIcone selecionado={dados.icone} cor={dados.cor} escolher={(icone) => alterar({ icone })} />
+            </>
           )}
-          {enviando && <small className="campo-dica">Enviando a imagem para a Moovin…</small>}
           <Campo rotulo="Texto do balão (tooltip)" dica={`${dados.tooltip.length}/300 caracteres. Aparece ao passar o mouse sobre o badge.`}>
             <textarea className="entrada" rows={3} maxLength={300} value={dados.tooltip} onChange={(e) => alterar({ tooltip: e.target.value })} />
           </Campo>
@@ -96,7 +161,7 @@ function Formulario({ badge, fechar, salvo }: { badge: Badge | null; fechar: () 
         <span />
         <span className="heading-actions">
           <button type="button" className="button button-secondary" onClick={fechar}>Cancelar</button>
-          <button type="button" className="button button-primary" disabled={salvando || enviando || !dados.nome || !dados.imagem} onClick={salvar}>
+          <button type="button" className="button button-primary" disabled={salvando || enviando || !dados.nome || !temVisual(dados)} onClick={salvar}>
             {salvando ? "Salvando…" : "Salvar badge"}
           </button>
         </span>
@@ -148,7 +213,7 @@ export function Badges() {
             {!lista && !erro && <tr><td colSpan={5} className="vazio">Carregando…</td></tr>}
             {lista?.map((b) => (
               <tr key={b.id}>
-                <td><img src={b.imagem} alt="" /></td>
+                <td><ConteudoBadge badge={b} tamanho={40} /></td>
                 <td><strong>{b.nome}</strong></td>
                 <td>{b.tooltip || <span className="vazio">—</span>}</td>
                 <td>{b.link ? <a href={b.link} target="_blank" rel="noopener noreferrer">{b.link}</a> : <span className="vazio">sem link</span>}</td>

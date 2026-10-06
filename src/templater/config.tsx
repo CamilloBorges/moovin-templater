@@ -24,7 +24,7 @@ type Blocos = {
   BarraCompraFixa: {};
   Resumo: {};
   Descricao: { sobretitulo: string; titulo: string };
-  Badges: { tamanho: number };
+  Badges: { tamanho: number; porLinha: number; maxLinhas: number };
   PrecoPorUnidade: {};
   AbasDetalhes: { sobretitulo: string; titulo: string; estilo: "abas" | "sanfona" | "lista"; numerar: SimNao };
   Texto: { texto: string };
@@ -136,15 +136,21 @@ export const config: Config<ComNome<Blocos>, RaizTemplate> = {
         tamanho: {
           type: "select",
           label: "Tamanho",
-          options: [
-            { label: "Pequeno (32 px)", value: 32 },
-            { label: "Médio (48 px)", value: 48 },
-            { label: "Grande (64 px)", value: 64 },
-          ],
+          options: [64, 80, 96, 128].map((px) => ({ label: `${px} px`, value: px })),
+        },
+        porLinha: {
+          type: "select",
+          label: "Badges por linha",
+          options: [1, 2, 3, 4, 5, 6, 8].map((n) => ({ label: String(n), value: n })),
+        },
+        maxLinhas: {
+          type: "select",
+          label: "Máximo de linhas",
+          options: [1, 2, 3, 4].map((n) => ({ label: String(n), value: n })),
         },
       },
-      defaultProps: { tamanho: 48 },
-      render: ({ tamanho }) => <B.Badges tamanho={tamanho} />,
+      defaultProps: { tamanho: 64, porLinha: 4, maxLinhas: 2 },
+      render: ({ tamanho, porLinha, maxLinhas }) => <B.Badges tamanho={tamanho} porLinha={porLinha} maxLinhas={maxLinhas} />,
     },
     PrecoPorUnidade: {
       label: "Quantidade e preço por kg / L / un",
