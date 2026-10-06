@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { EditorTexto } from "../../componentes/EditorTexto";
-import { precoPorUnidade, type Aba, type ComplementoProduto, type UnidadeConteudo } from "../../templater/produto";
+import { precoPorUnidade, textoUnidade, type Aba, type ComplementoProduto, type UnidadeConteudo } from "../../templater/produto";
 import { Campo, Numero, Secao, Texto } from "./campos";
 
 // Resumo, descrição da página, conteúdo da embalagem e abas: o que a Moovin não tem.
@@ -104,6 +104,9 @@ export function SecoesComplemento({ complemento, preco, migrar, aoMudar }: {
                   <option value="l">L</option>
                   <option value="un">un</option>
                 </select>
+              </Campo>
+              <Campo rotulo="Abaixo do preço, na página">
+                <output className="valor-calculado">{textoUnidade(conteudo) ?? "—"}</output>
               </Campo>
               <Campo rotulo="Preço de referência">
                 <output className="valor-calculado">{referencia ?? "—"}</output>

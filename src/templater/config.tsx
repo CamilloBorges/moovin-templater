@@ -130,7 +130,7 @@ export const config: Config<ComNome<Blocos>, RaizTemplate> = {
       render: ({ sobretitulo, titulo }) => <B.Descricao sobretitulo={sobretitulo} titulo={titulo} />,
     },
     PrecoPorUnidade: {
-      label: "Preço por kg / L / un",
+      label: "Quantidade e preço por kg / L / un",
       render: () => <B.PrecoPorUnidade />,
     },
     AbasDetalhes: {

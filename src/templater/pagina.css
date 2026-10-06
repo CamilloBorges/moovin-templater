@@ -19,6 +19,8 @@
 .tpl-comprar { padding: 12px 28px; border-radius: 12px; background: var(--tpl-destaque); color: var(--tpl-principal); font-weight: 700; }
 .tpl-compra .tpl-comprar { flex: 1; text-align: center; }
 .tpl-preco-unidade { margin: 0; text-align: right; font: 600 15px/1.4 Arial, sans-serif; }
+.tpl-preco-unidade p { margin: 0; }
+.tpl-preco-unidade .tpl-unidade { color: #675f55; font-weight: 400; font-size: 14px; }
 .tpl-detalhes { margin-bottom: 30px; }
 .tpl-descricao { padding: 28px 32px; border: 1px solid var(--tpl-borda); border-radius: 20px; background: #fff; box-shadow: var(--tpl-sombra); color: #514b43; font: 16px/1.8 Georgia, "Times New Roman", serif; }
 .tpl-sobretitulo { display: block; margin-bottom: 8px; color: #a27b3b; font: 700 11px/1.4 Arial, sans-serif; letter-spacing: .16em; }

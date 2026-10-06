@@ -42,6 +42,17 @@ export function precoPorUnidade(preco: number, conteudo: ComplementoProduto["con
   return `${formatarMoeda((preco * base) / conteudo.quantidade)} / ${rotulo}`;
 }
 
+// Texto da quantidade comercial, abaixo do preço: "Unidade de 0,700 kg" (peso e volume sempre
+// em kg/L com 3 casas, como na balança); unidades: "Embalagem com 6 un".
+export function textoUnidade(conteudo: ComplementoProduto["conteudoComercial"]) {
+  if (!conteudo || conteudo.quantidade <= 0) return null;
+  const { quantidade, unidade } = conteudo;
+  if (unidade === "un") return `Embalagem com ${quantidade.toLocaleString("pt-BR")} un`;
+  const valor = unidade === "g" || unidade === "ml" ? quantidade / 1000 : quantidade;
+  const rotulo = unidade === "g" || unidade === "kg" ? "kg" : "L";
+  return `Unidade de ${valor.toLocaleString("pt-BR", { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${rotulo}`;
+}
+
 export function paraTemplate(produto: ProdutoCadastro): ProdutoTemplate {
   const variacao = produto.variacoes[0];
   return {

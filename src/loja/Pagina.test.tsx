@@ -37,7 +37,7 @@ afterEach(() => {
 describe("Pagina (renderizador do script da loja)", () => {
   it("monta o layout padrão com os dados do Moovin e do Complemento", () => {
     const html = renderizar(templatePadrao).textContent ?? "";
-    for (const texto of ["Cubos de Panela", "Resumo dos cubos.", "Descrição longa dos cubos.", "Preparo", "Panela de pressão."]) {
+    for (const texto of ["Cubos de Panela", "Unidade de 0,500 kg", "Resumo dos cubos.", "Descrição longa dos cubos.", "Preparo", "Panela de pressão."]) {
       expect(html).toContain(texto);
     }
   });

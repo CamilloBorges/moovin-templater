@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import DOMPurify from "dompurify";
-import { formatarMoeda, precoPorUnidade, type Aba, type ProdutoTemplate } from "./produto";
+import { formatarMoeda, precoPorUnidade, type Aba, type ProdutoTemplate, textoUnidade } from "./produto";
 
 // Blocos da página de produto. São os mesmos componentes no editor (prévia, dentro do Puck) e na
 // loja (script servido por URL), para a prévia ficar igual à página publicada.
@@ -178,7 +178,14 @@ export function PrecoPorUnidade() {
   const { complemento } = useAmbiente().produto;
   const { preco } = useCompra();
   const texto = precoPorUnidade(preco, complemento.conteudoComercial);
-  return texto ? <p className="tpl-preco-unidade">{texto}</p> : <Vazio texto="Produto sem conteúdo da embalagem no Complemento" />;
+  const unidade = textoUnidade(complemento.conteudoComercial);
+  if (!unidade) return <Vazio texto="Produto sem conteúdo da embalagem no Complemento" />;
+  return (
+    <div className="tpl-preco-unidade">
+      <p className="tpl-unidade">{unidade}</p>
+      {texto && <p>{texto}</p>}
+    </div>
+  );
 }
 
 type EstiloAbas = "abas" | "sanfona" | "lista";
