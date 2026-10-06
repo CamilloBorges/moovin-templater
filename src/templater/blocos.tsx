@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type MouseEvent, type ReactNode } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import DOMPurify from "dompurify";
 import { formatarMoeda, precoPorUnidade, type Aba, type Badge, type ProdutoTemplate, textoUnidade } from "./produto";
+import { estilo, useFontes, varsTexto, type EstiloTexto } from "./estilo";
 
 // Blocos da página de produto. São os mesmos componentes no editor (prévia, dentro do Puck) e na
 // loja (script servido por URL), para a prévia ficar igual à página publicada.
@@ -43,7 +44,7 @@ function useCompra() {
 }
 
 const html = (conteudo: string) => ({ __html: DOMPurify.sanitize(conteudo) });
-type Slot = (className: string) => ReactNode;
+type Slot = (className: string, style?: CSSProperties) => ReactNode;
 type SimNao = "sim" | "nao";
 
 function Vazio({ texto }: { texto: string }) {
@@ -68,8 +69,35 @@ export function Colunas({ proporcao, esquerda, direita }: { proporcao: string; e
   );
 }
 
-export function Cartao({ fundo, conteudo }: { fundo: string; conteudo: Slot }) {
-  return <>{conteudo(`tpl-cartao tpl-cartao-${fundo}`)}</>;
+export type PropsCartao = {
+  cantos?: "arredondados" | "retos";
+  fundo?: "cor" | "imagem" | "nenhum" | "branco" | "transparente"; // branco/transparente: templates antigos
+  corFundo?: string;
+  imagemFundo?: string;
+  ajusteImagem?: "cobrir" | "ajustar";
+  sombra?: SimNao;
+};
+
+// Fundo e cantos do cartão. Templates antigos: "branco" = cor branca; "transparente" = sem fundo.
+export function estiloCartao(p: PropsCartao): { classe: string; style: CSSProperties } {
+  const fundo = p.fundo === "branco" ? "cor" : p.fundo === "transparente" ? "nenhum" : p.fundo ?? "cor";
+  const style: CSSProperties = {};
+  if (fundo === "cor") style.background = /^#[0-9a-f]{6}$/i.test(p.corFundo ?? "") ? p.corFundo : "#ffffff";
+  if (fundo === "imagem" && p.imagemFundo) {
+    style.backgroundImage = `url("${encodeURI(p.imagemFundo)}")`;
+    style.backgroundSize = p.ajusteImagem === "ajustar" ? "contain" : "cover";
+    style.backgroundPosition = "center";
+    style.backgroundRepeat = "no-repeat";
+  }
+  const classes = ["tpl-cartao", `tpl-cartao-${fundo}`];
+  if (p.cantos === "retos") classes.push("tpl-cantos-retos");
+  if (fundo !== "nenhum" && p.sombra !== "nao") classes.push("tpl-cartao-sombra");
+  return { classe: classes.join(" "), style };
+}
+
+export function Cartao({ conteudo, ...props }: PropsCartao & { conteudo: Slot }) {
+  const { classe, style } = estiloCartao(props);
+  return <>{conteudo(classe, style)}</>;
 }
 
 export function Galeria({ sombra }: { sombra: SimNao }) {
@@ -175,23 +203,58 @@ function Quantidade() {
   );
 }
 
-export function LinhaCompra() {
+export type EstiloBotao = EstiloTexto & {
+  estilo?: "solido" | "contorno";
+  corTexto?: string;
+  cantos?: "retos" | "arredondados" | "pilula";
+};
+
+export type PropsCompra = {
+  preco?: EstiloTexto;
+  quantidade?: EstiloTexto;
+  botao?: EstiloBotao;
+  disposicao?: "auto" | "linha" | "empilhado";
+};
+
+// Variáveis CSS e classes do preço, da quantidade e do botão (Linha de compra e Barra fixa).
+function aparenciaCompra(p: PropsCompra) {
+  const b = p.botao ?? {};
+  const style = estilo(
+    varsTexto("tpl-preco", p.preco),
+    varsTexto("tpl-qtd", p.quantidade),
+    varsTexto("tpl-botao", b),
+    /^#[0-9a-f]{6}$/i.test(b.corTexto ?? "") ? { "--tpl-botao-texto": b.corTexto! } : {},
+  );
+  const classes = [`tpl-botao-${b.estilo ?? "solido"}`, `tpl-botao-cantos-${b.cantos ?? "arredondados"}`];
+  return { style, classes: classes.join(" ") };
+}
+
+export function LinhaCompra(props: PropsCompra) {
   const compra = useCompra();
+  const ref = useFontes(props.preco?.fonte, props.quantidade?.fonte, props.botao?.fonte);
+  const { style, classes } = aparenciaCompra(props);
+  // A caixa externa mede a largura disponível (container query): em cartão estreito, o botão
+  // desce para a linha de baixo. "linha" e "empilhado" forçam a disposição.
   return (
-    <div className="tpl-compra" data-tpl-compra="">
-      <strong>{formatarMoeda(compra.preco)}</strong>
-      <Quantidade />
-      <button type="button" className="tpl-comprar" onClick={compra.comprar}>{compra.textoComprar}</button>
+    <div className="tpl-compra-caixa" ref={ref as React.Ref<HTMLDivElement>}>
+      <div className={`tpl-compra tpl-disposicao-${props.disposicao ?? "auto"} ${classes}`} style={style} data-tpl-compra="">
+        <strong className="tpl-preco">{formatarMoeda(compra.preco)}</strong>
+        <Quantidade />
+        <button type="button" className="tpl-comprar" onClick={compra.comprar}>{compra.textoComprar}</button>
+      </div>
     </div>
   );
 }
 
 // Na loja aparece fixa no rodapé quando a linha de compra sai da tela; no editor, mostra onde fica.
-export function BarraCompraFixa() {
+export function BarraCompraFixa(props: PropsCompra & { corFundo?: string }) {
   const { editando, loja } = useAmbiente();
+  const fontes = useFontes(props.preco?.fonte, props.quantidade?.fonte, props.botao?.fonte);
+  const { style, classes } = aparenciaCompra(props);
+  if (/^#[0-9a-f]{6}$/i.test(props.corFundo ?? "")) (style as Record<string, string>)["--tpl-barra-fundo"] = props.corFundo!;
   const compra = useCompra();
   const [visivel, setVisivel] = useState(false);
-  const barra = useRef<HTMLDivElement>(null);
+  const barra = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (!loja) return;
     const linha = (barra.current?.ownerDocument ?? document).querySelector("[data-tpl-compra]");
@@ -201,9 +264,14 @@ export function BarraCompraFixa() {
     return () => observador.disconnect();
   }, [loja]);
   return (
-    <div ref={barra} className={`tpl-barra-fixa${loja ? " tpl-fixa" : ""}${visivel ? " visivel" : ""}`} aria-hidden={loja ? !visivel : undefined}>
+    <div
+      ref={(el) => { barra.current = el; fontes.current = el; }}
+      className={`tpl-barra-fixa ${classes}${loja ? " tpl-fixa" : ""}${visivel ? " visivel" : ""}`}
+      style={style}
+      aria-hidden={loja ? !visivel : undefined}
+    >
       {editando && <small>Aparece ao rolar, quando a área de compra sai da tela</small>}
-      <strong>{formatarMoeda(compra.preco)}</strong>
+      <strong className="tpl-preco">{formatarMoeda(compra.preco)}</strong>
       <Quantidade />
       <button type="button" className="tpl-comprar" onClick={compra.comprar}>{compra.textoComprar}</button>
     </div>
@@ -274,16 +342,21 @@ export function Badges({ tamanho, porLinha, maxLinhas }: { tamanho: number; porL
   );
 }
 
-export function PrecoPorUnidade() {
+export type PropsPrecoUnidade = { unidade?: EstiloTexto; precoKg?: EstiloTexto; alinhamento?: "esquerda" | "centro" | "direita" };
+
+export function PrecoPorUnidade({ unidade: eUnidade, precoKg, alinhamento }: PropsPrecoUnidade) {
   const { complemento } = useAmbiente().produto;
   const { preco } = useCompra();
+  const ref = useFontes(eUnidade?.fonte, precoKg?.fonte);
   const texto = precoPorUnidade(preco, complemento.conteudoComercial);
   const unidade = textoUnidade(complemento.conteudoComercial);
   if (!unidade) return <Vazio texto="Produto sem conteúdo da embalagem no Complemento" />;
+  const alinhar = { esquerda: "left", centro: "center", direita: "right" }[alinhamento ?? "direita"];
   return (
-    <div className="tpl-preco-unidade">
+    <div ref={ref as React.Ref<HTMLDivElement>} className="tpl-preco-unidade"
+      style={estilo(varsTexto("tpl-unidade", eUnidade), varsTexto("tpl-precokg", precoKg), { "--tpl-alinhar": alinhar })}>
       <p className="tpl-unidade">{unidade}</p>
-      {texto && <p>{texto}</p>}
+      {texto && <p className="tpl-precokg">{texto}</p>}
     </div>
   );
 }

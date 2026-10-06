@@ -23,7 +23,10 @@ export const templatePadrao: TemplateData = {
             props: {
               id: "cartao-informacoes",
               nome: "Cartão de informações",
-              fundo: "branco",
+              cantos: "arredondados",
+              fundo: "cor",
+              corFundo: "#ffffff",
+              sombra: "sim",
               conteudo: [
                 {
                   type: "Titulo",
@@ -39,7 +42,10 @@ export const templatePadrao: TemplateData = {
             props: {
               id: "cartao-compra",
               nome: "Cartão de compra",
-              fundo: "branco",
+              cantos: "arredondados",
+              fundo: "cor",
+              corFundo: "#ffffff",
+              sombra: "sim",
               conteudo: [
                 { type: "LinhaCompra", props: { id: "linha-compra" } },
                 { type: "PrecoPorUnidade", props: { id: "preco-unidade" } },

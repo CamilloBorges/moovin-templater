@@ -225,6 +225,23 @@ Ainda não há backend, API de templates nem renderizador da loja.
   - dica para logotipos com fundo liso: usar a remoção por cor;
   - o servidor só aceita os modelos da lista, e o `bria-rmbg`, não comercial, fica fora.
 
+## Fase 13 — Estilo do cartão e da compra; compra responsiva (06/10/2026)
+
+- **Cartão:**
+  - cantos arredondados ou retos;
+  - fundo com cor, imagem (enviada para a Moovin, cobrir ou ajustar) ou sem fundo;
+  - borda e sombra;
+  - templates antigos: "branco" vira cor branca e "transparente" vira sem fundo.
+- **Preço, quantidade e comprar (e a barra fixa):**
+  - fonte, cor e tamanho do preço e da quantidade;
+  - botão sólido ou de contorno, com cor, cor do texto, fonte, tamanho e cantos (retos, arredondados ou pílula);
+  - disposição automática, numa linha ou empilhada.
+- **Quantidade e preço por kg:** fonte, cor e tamanho de cada linha, e o alinhamento.
+- **Fontes:** do sistema e do Google (Montserrat, Poppins, Lato, Roboto, Oswald, Playfair), carregadas no documento só quando usadas.
+- **Responsivo:** container query na linha de compra; com cartão estreito, o botão desce. Conferido em 390 px e 1000 px.
+- **Bug encontrado no teste visual:** `.tpl button { font: inherit; color: inherit }` anulava os estilos do botão. As regras passaram para `.tpl .tpl-comprar`.
+- **Testes:** 82.
+
 ## Próximos passos
 
 1. **Implantar (Camillo):** serviço Compose no EasyPanel a partir deste repositório e domínio **`templater.bomgado.net`** pelo túnel da Cloudflare apontando para `app:3001`. **Decisão de 06/10:** sem Cloudflare Access; o painel fica protegido só pelo login da Moovin. O caminho `/loja/*` precisa ficar **público** (sem Cloudflare Access), porque a loja o carrega no navegador do cliente.

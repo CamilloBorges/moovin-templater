@@ -1,4 +1,5 @@
-import type { Config, Slot } from "@puckeditor/core";
+import type { Config, Fields, Slot } from "@puckeditor/core";
+import { campoCor, campoFonte, campoImagem, campoTamanho, campoTexto } from "./campos";
 import * as B from "./blocos";
 import type { ProdutoTemplate } from "./produto";
 
@@ -17,17 +18,44 @@ const simNao = {
 
 type Blocos = {
   Colunas: { proporcao: "50/50" | "60/40" | "40/60"; esquerda: Slot; direita: Slot };
-  Cartao: { fundo: "branco" | "transparente"; conteudo: Slot };
+  Cartao: B.PropsCartao & { conteudo: Slot };
   Galeria: { sombra: SimNao };
   Titulo: { mostrarCodigo: SimNao; mostrarAvaliacao: SimNao; mostrarCompartilhar: SimNao };
-  LinhaCompra: {};
-  BarraCompraFixa: {};
+  LinhaCompra: B.PropsCompra;
+  BarraCompraFixa: B.PropsCompra & { corFundo?: string };
   Resumo: {};
   Descricao: { sobretitulo: string; titulo: string };
   Badges: { tamanho: number; porLinha: number; maxLinhas: number };
-  PrecoPorUnidade: {};
+  PrecoPorUnidade: B.PropsPrecoUnidade;
   AbasDetalhes: { sobretitulo: string; titulo: string; estilo: "abas" | "sanfona" | "lista"; numerar: SimNao };
   Texto: { texto: string };
+};
+
+// Preço, quantidade e botão: os mesmos campos na Linha de compra e na Barra fixa.
+const camposCompra: Fields<B.PropsCompra> = {
+  disposicao: {
+    type: "select",
+    label: "Disposição",
+    options: [
+      { label: "Automática (o botão desce quando falta espaço)", value: "auto" },
+      { label: "Tudo numa linha", value: "linha" },
+      { label: "Empilhado (botão embaixo)", value: "empilhado" },
+    ],
+  },
+  preco: campoTexto("Preço"),
+  quantidade: campoTexto("Quantidade"),
+  botao: {
+    type: "object",
+    label: "Botão comprar",
+    objectFields: {
+      estilo: { type: "radio", label: "Estilo", options: [{ label: "Sólido", value: "solido" }, { label: "Contorno", value: "contorno" }] },
+      cor: campoCor("Cor do botão"),
+      corTexto: campoCor("Cor do texto"),
+      fonte: campoFonte(),
+      tamanho: campoTamanho("Tamanho do texto"),
+      cantos: { type: "radio", label: "Cantos", options: [{ label: "Retos", value: "retos" }, { label: "Arredondados", value: "arredondados" }, { label: "Pílula", value: "pilula" }] },
+    },
+  },
 };
 
 // Todo bloco tem um nome próprio, usado só no editor (estrutura e etiqueta na prévia).
@@ -78,18 +106,27 @@ export const config: Config<ComNome<Blocos>, RaizTemplate> = {
     Cartao: {
       label: "Cartão",
       fields: {
-        fundo: {
-          type: "radio",
-          label: "Fundo",
-          options: [
-            { label: "Branco", value: "branco" },
-            { label: "Transparente", value: "transparente" },
-          ],
-        },
+        cantos: { type: "radio", label: "Cantos", options: [{ label: "Arredondados", value: "arredondados" }, { label: "Retos", value: "retos" }] },
+        fundo: { type: "radio", label: "Fundo", options: [{ label: "Cor", value: "cor" }, { label: "Imagem", value: "imagem" }, { label: "Sem fundo", value: "nenhum" }] },
+        corFundo: campoCor("Cor do fundo"),
+        imagemFundo: campoImagem("Imagem do fundo"),
+        ajusteImagem: { type: "radio", label: "Imagem", options: [{ label: "Cobrir o cartão", value: "cobrir" }, { label: "Ajustar inteira", value: "ajustar" }] },
+        sombra: { ...simNao, label: "Borda e sombra" },
         conteudo: { type: "slot", label: "Conteúdo" },
       },
-      defaultProps: { fundo: "branco", conteudo: [] },
-      render: ({ fundo, conteudo: Conteudo }) => <B.Cartao fundo={fundo} conteudo={(c) => <Conteudo className={c} />} />,
+      defaultProps: { cantos: "arredondados", fundo: "cor", corFundo: "#ffffff", imagemFundo: "", ajusteImagem: "cobrir", sombra: "sim", conteudo: [] },
+      // Só os campos do tipo de fundo escolhido (templates antigos: branco = cor; transparente = sem fundo).
+      resolveFields: (data, { fields }) => {
+        const fundo = data.props.fundo === "branco" ? "cor" : data.props.fundo === "transparente" ? "nenhum" : data.props.fundo;
+        const { corFundo, imagemFundo, ajusteImagem, sombra, ...resto } = fields;
+        return {
+          ...resto,
+          ...(fundo === "cor" ? { corFundo } : {}),
+          ...(fundo === "imagem" ? { imagemFundo, ajusteImagem } : {}),
+          ...(fundo !== "nenhum" ? { sombra } : {}),
+        } as typeof fields;
+      },
+      render: ({ conteudo: Conteudo, ...props }) => <B.Cartao {...props} conteudo={(c, s) => <Conteudo className={c} style={s} />} />,
     },
     Galeria: {
       label: "Galeria de imagens",
@@ -111,11 +148,15 @@ export const config: Config<ComNome<Blocos>, RaizTemplate> = {
     },
     LinhaCompra: {
       label: "Preço, quantidade e comprar",
-      render: () => <B.LinhaCompra />,
+      fields: camposCompra,
+      defaultProps: { disposicao: "auto", preco: {}, quantidade: {}, botao: { estilo: "solido", cantos: "arredondados" } },
+      render: (props) => <B.LinhaCompra {...props} />,
     },
     BarraCompraFixa: {
       label: "Barra de compra fixa",
-      render: () => <B.BarraCompraFixa />,
+      fields: { ...camposCompra, corFundo: campoCor("Cor do fundo da barra") },
+      defaultProps: { disposicao: "auto", preco: {}, quantidade: {}, botao: { estilo: "solido", cantos: "arredondados" }, corFundo: "" },
+      render: (props) => <B.BarraCompraFixa {...props} />,
     },
     Resumo: {
       label: "Resumo do produto",
@@ -154,7 +195,13 @@ export const config: Config<ComNome<Blocos>, RaizTemplate> = {
     },
     PrecoPorUnidade: {
       label: "Quantidade e preço por kg / L / un",
-      render: () => <B.PrecoPorUnidade />,
+      fields: {
+        unidade: campoTexto("“Unidade de 0,700 kg”"),
+        precoKg: campoTexto("Preço por kg / L / un"),
+        alinhamento: { type: "radio", label: "Alinhamento", options: [{ label: "Esquerda", value: "esquerda" }, { label: "Centro", value: "centro" }, { label: "Direita", value: "direita" }] },
+      },
+      defaultProps: { unidade: {}, precoKg: {}, alinhamento: "direita" },
+      render: (props) => <B.PrecoPorUnidade {...props} />,
     },
     AbasDetalhes: {
       label: "Abas de detalhes",
