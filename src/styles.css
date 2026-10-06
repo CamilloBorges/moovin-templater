@@ -271,4 +271,15 @@ textarea.entrada { height: auto; padding: 8px 10px; resize: vertical; font-famil
 .passo-corpo > .button { align-self: flex-start; }
 .manual summary { cursor: pointer; font-size: 13px; color: #117950; }
 .manual ol, .conferencia { margin: 8px 0 0; padding-left: 20px; font-size: 13px; line-height: 1.7; }
+.badges-ordem { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.badge-opcao.arrastavel { cursor: grab; padding-left: 8px; touch-action: none; user-select: none; }
+.badge-opcao.arrastavel:active { cursor: grabbing; }
+.badge-opcao.arrastavel b { position: static; width: 20px; height: 20px; flex-shrink: 0; }
+.badge-opcao.arrastando { position: relative; z-index: 2; opacity: .85; box-shadow: 0 8px 20px rgba(0,0,0,.18); }
+.badge-opcao.alvo-antes { box-shadow: -4px 0 0 #117950; }
+.badge-opcao.alvo-depois { box-shadow: 4px 0 0 #117950; }
+.badge-opcao .alca { color: var(--muted); letter-spacing: -2px; font-size: 12px; }
+.badge-opcao .mais { color: #117950; font-weight: 700; }
+button.badge-opcao { font: inherit; }
+.badge-opcao:focus-visible { outline: 2px solid #117950; outline-offset: 2px; }
 

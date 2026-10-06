@@ -10,8 +10,8 @@ import { Alternador, Campo, CampoReferencia, Numero, Secao, Texto } from "./camp
 import { SecoesComplemento } from "./Complemento";
 import { SecaoImagens } from "./Imagens";
 import { SecaoVariacoes } from "./Variacoes";
+import { BadgesDoProduto } from "./BadgesDoProduto";
 import { PreviaPagina } from "../../componentes/PreviaPagina";
-import { ConteudoBadge } from "../../templater/blocos";
 import { EditorTexto } from "../../componentes/EditorTexto";
 import { descricaoParaIa } from "../../produtos/descricao";
 
@@ -54,29 +54,6 @@ function Grupo({ titulo, descricao, aberto, aoAlternar, children }: {
       </summary>
       <div className="grupo-conteudo">{children}</div>
     </details>
-  );
-}
-
-// Badges do produto: escolha entre os cadastrados, na ordem em que foram marcados.
-function SecaoBadges({ selecionados, todos, aoMudar }: { selecionados: string[]; todos: Badge[]; aoMudar: (ids: string[]) => void }) {
-  const alternar = (id: string) => aoMudar(selecionados.includes(id) ? selecionados.filter((x) => x !== id) : [...selecionados, id]);
-  return (
-    <Secao titulo="Badges" descricao="Selos exibidos pelo bloco Badges do template, na ordem em que forem marcados.">
-      {todos.length === 0 ? (
-        <p className="campo-dica">Nenhum badge cadastrado. <a href="#/badges">Cadastrar badges</a></p>
-      ) : (
-        <div className="badges-escolha">
-          {todos.map((b) => (
-            <label key={b.id} className={selecionados.includes(b.id) ? "badge-opcao marcado" : "badge-opcao"} title={b.tooltip}>
-              <input type="checkbox" checked={selecionados.includes(b.id)} onChange={() => alternar(b.id)} />
-              <ConteudoBadge badge={b} tamanho={32} />
-              <span>{b.nome}</span>
-              {selecionados.includes(b.id) && <b>{selecionados.indexOf(b.id) + 1}</b>}
-            </label>
-          ))}
-        </div>
-      )}
-    </Secao>
   );
 }
 
@@ -373,7 +350,7 @@ function FormularioProduto({ original, catalogo, todosBadges, avisoInicial, reca
             migrar={original.migrar}
             aoMudar={(complemento) => alterar({ complemento })}
           />
-          <SecaoBadges
+          <BadgesDoProduto
             selecionados={produto.complemento.badges}
             todos={todosBadges}
             aoMudar={(badges) => alterar({ complemento: { ...produto.complemento, badges } })}
