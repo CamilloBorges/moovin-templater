@@ -52,7 +52,7 @@ O painel tem duas áreas, navegadas pelo endereço (`#/produtos` e `#/aparencia`
 
 ### Produtos (`src/telas/produtos/`)
 
-Substitui a tela de cadastro de produto da Moovin, com as mesmas seções, mais o Complemento:
+Substitui a tela de cadastro de produto da Moovin, com as mesmas seções, mais o Complemento. No topo fica o nome do produto; abaixo, dois grupos recolhíveis: **Campos do Moovin** (fechado por padrão; abre sozinho se houver erro de validação nele) e **Campos Complementares** (aberto):
 
 - **Informações principais:** ativo/inativo, nome e descrição (editor de texto formatado com contador).
 - **Organização:** categoria principal, mais categorias e marca. Permite escolher ou criar, como na Moovin.
@@ -68,6 +68,14 @@ Substitui a tela de cadastro de produto da Moovin, com as mesmas seções, mais 
 Os campos que o Logus também atualiza (nome, categoria, preço e estoque) têm o selo "Logus". Continuam editáveis, mas o Logus pode sobrescrevê-los em cerca de 30 minutos.
 
 Os dados ficam no navegador (`src/produtos/repositorio.ts`), começando pelos Cubos de Panela. O modelo (`src/produtos/modelo.ts`) traz, em comentário, o nome de cada campo na API da Moovin, para a etapa de integração.
+
+### Badges (`src/telas/Badges.tsx`)
+
+Cadastro de selos da loja: nome, imagem, texto do balão (tooltip, até 300 caracteres) e link opcional para a descrição completa.
+- **A imagem é enviada para a Moovin** (`PUT dam-storage/file/public/templater/badges/<nome>-<carimbo>.<ext>`); o cadastro guarda o endereço. Os demais dados ficam no MongoDB (coleção `badges`).
+- **No produto**, os badges são marcados nos Campos Complementares, na ordem de exibição. O Complemento guarda só os ids.
+- **Na loja**, o bloco "Badges" mostra as imagens com o balão ao passar o mouse (ou ao focar pelo teclado). Badge com link vira um link que abre em outra aba; sem link, não há link. A rota `/loja/<conta>/complemento/<sku>` já devolve os badges resolvidos.
+- Excluir um badge o tira de todos os produtos.
 
 ### Aparência: Templater (`src/telas/Templater.tsx`)
 

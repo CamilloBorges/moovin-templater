@@ -53,7 +53,7 @@ export function lerCodigo(n: Nativo): string {
   return /Cod\.?\s*:\s*(\S+)/i.exec(texto(n.info.children[0]))?.[1] ?? "";
 }
 
-export function extrairProduto(n: Nativo, complemento: ProdutoTemplate["complemento"]): ProdutoTemplate {
+export function extrairProduto(n: Nativo, complemento: ProdutoTemplate["complemento"], badges: ProdutoTemplate["badges"]): ProdutoTemplate {
   const cabecalho = n.info.children[0];
   const vistos = new Set<string>();
   const imagens = Array.from(n.galeria.querySelectorAll("img"))
@@ -75,6 +75,7 @@ export function extrairProduto(n: Nativo, complemento: ProdutoTemplate["compleme
       avaliacao: avaliacoes ? { nota: 0, total: Number(avaliacoes[1]) } : null,
     },
     complemento,
+    badges,
   };
 }
 

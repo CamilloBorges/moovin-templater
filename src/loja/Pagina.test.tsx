@@ -18,7 +18,12 @@ const produto: ProdutoTemplate = {
     descricao: "<p>Descrição longa dos cubos.</p>",
     conteudoComercial: { quantidade: 500, unidade: "g" },
     abas: [{ titulo: "Preparo", conteudo: "<p>Panela de pressão.</p>" }],
+    badges: ["b1", "b2"],
   },
+  badges: [
+    { id: "b1", nome: "Sem glúten", imagem: "https://exemplo/sg.png", tooltip: "Produto sem glúten", link: "https://loja.exemplo/sem-gluten" },
+    { id: "b2", nome: "Grass fed", imagem: "https://exemplo/gf.png", tooltip: "", link: "" },
+  ],
 };
 
 let raiz: ReturnType<typeof createRoot> | null = null;
@@ -74,5 +79,26 @@ describe("botão compartilhar", () => {
     await act(async () => botao.click());
     expect(writeText).toHaveBeenCalledWith("https://loja.exemplo/cubos/p");
     expect(container.textContent).toContain("Link copiado!");
+  });
+});
+
+describe("bloco Badges", () => {
+  const template = { root: { props: {} }, content: [{ type: "Badges", props: { id: "b", tamanho: 48 } }] } as unknown as TemplateData;
+
+  it("badge com link abre em outra aba, com o balão do tooltip", () => {
+    const link = renderizar(template).querySelector<HTMLAnchorElement>("a.tpl-badge")!;
+    expect(link.href).toBe("https://loja.exemplo/sem-gluten");
+    expect(link.target).toBe("_blank");
+    expect(link.rel).toContain("noopener");
+    expect(link.querySelector("[role=tooltip]")!.textContent).toBe("Produto sem glúten");
+    expect(link.querySelector("img")!.getAttribute("alt")).toBe("Sem glúten");
+  });
+
+  it("badge sem link não gera link nem balão vazio", () => {
+    const container = renderizar(template);
+    const badges = container.querySelectorAll(".tpl-badge");
+    expect(badges).toHaveLength(2);
+    expect(badges[1].tagName).toBe("SPAN");
+    expect(badges[1].querySelector("[role=tooltip]")).toBeNull();
   });
 });

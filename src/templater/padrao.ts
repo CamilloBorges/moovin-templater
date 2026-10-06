@@ -29,6 +29,7 @@ export const templatePadrao: TemplateData = {
                   type: "Titulo",
                   props: { id: "titulo", mostrarCodigo: "sim", mostrarAvaliacao: "sim", mostrarCompartilhar: "sim" },
                 },
+                { type: "Badges", props: { id: "badges", tamanho: 48 } },
                 { type: "Resumo", props: { id: "resumo" } },
               ],
             },

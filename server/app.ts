@@ -4,7 +4,8 @@ import { resolve } from "node:path";
 import Fastify from "fastify";
 import cookie from "@fastify/cookie";
 import fastifyStatic from "@fastify/static";
-import { complementos, sessoes, templates } from "./banco";
+import { randomUUID } from "node:crypto";
+import { badges, complementos, sessoes, templates, type DocBadge } from "./banco";
 import { repassar } from "./moovin";
 import { exigirSessao, rotasSessao } from "./sessao";
 
@@ -23,7 +24,7 @@ export async function criarApp({ log = true } = {}) {
   // Serviços da Moovin que o painel pode chamar (cadastro, preço, estoque, catálogo, SEO e arquivos).
   const SERVICOS = new Set(["oms-product", "oms-pricing", "oms-inventory", "oms-catalog", "eco-seo", "dam-storage"]);
 
-  app.all<{ Params: { servico: string; "*": string } }>("/api/moovin/:servico/*", { preHandler: exigirSessao }, async (pedido, resposta) => {
+  app.all<{ Params: { servico: string; "*": string } }>("/api/moovin/:servico/*", { preHandler: exigirSessao, bodyLimit: 15 * 1024 * 1024 }, async (pedido, resposta) => {
     const { servico } = pedido.params;
     if (!SERVICOS.has(servico)) return resposta.code(404).send({ erro: "Serviço não liberado." });
     const consulta = pedido.url.includes("?") ? pedido.url.slice(pedido.url.indexOf("?")) : "";
@@ -63,7 +64,12 @@ export async function criarApp({ log = true } = {}) {
   app.get<{ Params: { conta: string; sku: string } }>("/loja/:conta/complemento/:sku", async (pedido, resposta) => {
     resposta.header("cache-control", "public, max-age=60").header("access-control-allow-origin", "*");
     const doc = await complementos().findOne({ conta: pedido.params.conta, skus: pedido.params.sku });
-    return doc ? { complemento: doc.dados } : resposta.code(404).send({ erro: "Sem complemento." });
+    if (!doc) return resposta.code(404).send({ erro: "Sem complemento." });
+    // Badges do produto já resolvidos (na ordem escolhida), para a página não precisar de outra chamada.
+    const ids = ((doc.dados as { badges?: unknown }).badges ?? []) as string[];
+    const lista = ids.length ? await badges().find({ conta: pedido.params.conta, _id: { $in: ids } }).toArray() : [];
+    const porId = new Map(lista.map((b) => [b._id, publico(b)]));
+    return { complemento: doc.dados, badges: ids.map((id) => porId.get(id)).filter(Boolean) };
   });
 
   // Complemento do produto no painel (por id do produto na Moovin).
@@ -85,6 +91,40 @@ export async function criarApp({ log = true } = {}) {
       { upsert: true },
     );
     return { ok: true, atualizadoEm };
+  });
+
+  // Badges da loja (cadastro no painel).
+  app.get("/api/badges", { preHandler: exigirSessao }, async (pedido) => {
+    const lista = await badges().find({ conta: pedido.sessao!.conta!.id }).sort({ nome: 1 }).toArray();
+    return lista.map(publico);
+  });
+
+  app.post<{ Body: Partial<DocBadge> }>("/api/badges", { preHandler: exigirSessao }, async (pedido, resposta) => {
+    const dados = validarBadge(pedido.body);
+    if (typeof dados === "string") return resposta.code(400).send({ erro: dados });
+    const badge: DocBadge = { _id: randomUUID(), conta: pedido.sessao!.conta!.id, ...dados, atualizadoEm: new Date(), atualizadoPor: pedido.sessao!.usuario?.email ?? "" };
+    await badges().insertOne(badge);
+    return publico(badge);
+  });
+
+  app.put<{ Params: { id: string }; Body: Partial<DocBadge> }>("/api/badges/:id", { preHandler: exigirSessao }, async (pedido, resposta) => {
+    const dados = validarBadge(pedido.body);
+    if (typeof dados === "string") return resposta.code(400).send({ erro: dados });
+    const r = await badges().findOneAndUpdate(
+      { _id: pedido.params.id, conta: pedido.sessao!.conta!.id },
+      { $set: { ...dados, atualizadoEm: new Date(), atualizadoPor: pedido.sessao!.usuario?.email ?? "" } },
+      { returnDocument: "after" },
+    );
+    return r ? publico(r) : resposta.code(404).send({ erro: "Badge não encontrado." });
+  });
+
+  // Excluir tira o badge dos produtos que o usam.
+  app.delete<{ Params: { id: string } }>("/api/badges/:id", { preHandler: exigirSessao }, async (pedido, resposta) => {
+    const conta = pedido.sessao!.conta!.id;
+    const r = await badges().deleteOne({ _id: pedido.params.id, conta });
+    if (!r.deletedCount) return resposta.code(404).send({ erro: "Badge não encontrado." });
+    await complementos().updateMany({ conta, "dados.badges": pedido.params.id }, { $pull: { "dados.badges": pedido.params.id } as never });
+    return { ok: true };
   });
 
   // Templates da loja: rascunho e publicado.
@@ -114,4 +154,20 @@ export async function criarApp({ log = true } = {}) {
   const PAINEL = resolve("dist");
   if (existsSync(resolve(PAINEL, "index.html"))) await app.register(fastifyStatic, { root: PAINEL });
   return app;
+}
+
+// O que sai do badge para o painel e para a loja.
+function publico(b: DocBadge) {
+  return { id: b._id, nome: b.nome, imagem: b.imagem, tooltip: b.tooltip, link: b.link };
+}
+
+const URL_VALIDA = /^https?:\/\/\S+$/i;
+function validarBadge(corpo: Partial<DocBadge> | undefined): Pick<DocBadge, "nome" | "imagem" | "tooltip" | "link"> | string {
+  const texto = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+  const dados = { nome: texto(corpo?.nome), imagem: texto(corpo?.imagem), tooltip: texto(corpo?.tooltip), link: texto(corpo?.link) };
+  if (!dados.nome) return "Informe o nome do badge.";
+  if (!URL_VALIDA.test(dados.imagem)) return "Envie a imagem do badge.";
+  if (dados.tooltip.length > 300) return "O texto do balão pode ter até 300 caracteres.";
+  if (dados.link && !URL_VALIDA.test(dados.link)) return "O link precisa começar com http:// ou https://.";
+  return dados;
 }

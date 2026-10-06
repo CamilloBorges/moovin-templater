@@ -227,6 +227,30 @@ export function Descricao({ sobretitulo, titulo }: { sobretitulo: string; titulo
   );
 }
 
+// Badges (selos) do produto: imagem com balão ao passar o mouse (ou ao focar pelo teclado) e,
+// se o badge tiver link, abre a página de descrição completa em outra aba.
+export function Badges({ tamanho }: { tamanho: number }) {
+  const { badges } = useAmbiente().produto;
+  if (!badges.length) return <Vazio texto="Produto sem badges" />;
+  return (
+    <div className="tpl-badges">
+      {badges.map((b) => {
+        const imagem = <img src={b.imagem} alt={b.nome} width={tamanho} height={tamanho} loading="lazy" />;
+        const balao = b.tooltip && <span className="tpl-badge-balao" role="tooltip">{b.tooltip}</span>;
+        return b.link ? (
+          <a key={b.id} className="tpl-badge" href={b.link} target="_blank" rel="noopener noreferrer" aria-label={`${b.nome} (abre em outra aba)`}>
+            {imagem}{balao}
+          </a>
+        ) : (
+          <span key={b.id} className="tpl-badge" tabIndex={0} aria-label={b.nome}>
+            {imagem}{balao}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 export function PrecoPorUnidade() {
   const { complemento } = useAmbiente().produto;
   const { preco } = useCompra();

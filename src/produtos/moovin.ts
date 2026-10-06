@@ -1,5 +1,5 @@
 import { api, ErroApi } from "../api";
-import { complementoDaDescricao } from "./descricao";
+import { complementoDaDescricao, complementoVazio } from "./descricao";
 import type { ComplementoProduto } from "../templater/produto";
 import type { Imagem, ProdutoCadastro, Referencia, Variacao } from "./modelo";
 
@@ -96,7 +96,8 @@ export async function carregarProduto(id: string): Promise<Original> {
     caracteristicas: Object.fromEntries(produto.specifications.map((s) => [s.specification.id, s.value])),
     seo: { titulo: seo?.title ?? "", url: urn, descricao: seo?.metadata.find((m) => m.name === "description")?.content ?? "" },
     visivelApenasPorLink: produto.visibleOnlyByLink,
-    complemento: salvo ? salvo.dados : complementoDaDescricao(produto.description ?? ""),
+    // Documentos antigos podem não ter campos novos (ex.: badges): completa com os valores vazios.
+    complemento: salvo ? { ...complementoVazio(), ...salvo.dados } : complementoDaDescricao(produto.description ?? ""),
   };
   return { api: produto, seo, estoques: Object.fromEntries(skus.map((s, i) => [s, estoques[i]])), cadastro, migrar: !salvo };
 }

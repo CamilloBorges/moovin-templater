@@ -24,6 +24,7 @@ type Blocos = {
   BarraCompraFixa: {};
   Resumo: {};
   Descricao: { sobretitulo: string; titulo: string };
+  Badges: { tamanho: number };
   PrecoPorUnidade: {};
   AbasDetalhes: { sobretitulo: string; titulo: string; estilo: "abas" | "sanfona" | "lista"; numerar: SimNao };
   Texto: { texto: string };
@@ -50,7 +51,7 @@ export const config: Config<ComNome<Blocos>, RaizTemplate> = {
   categories: {
     estrutura: { title: "Estrutura", components: ["Colunas", "Cartao"] },
     moovin: { title: "Produto (Moovin)", components: ["Galeria", "Titulo", "LinhaCompra", "BarraCompraFixa"] },
-    complemento: { title: "Complemento do cadastro", components: ["Resumo", "Descricao", "PrecoPorUnidade", "AbasDetalhes"] },
+    complemento: { title: "Complemento do cadastro", components: ["Resumo", "Descricao", "Badges", "PrecoPorUnidade", "AbasDetalhes"] },
     conteudo: { title: "Conteúdo", components: ["Texto"] },
   },
   components: {
@@ -128,6 +129,22 @@ export const config: Config<ComNome<Blocos>, RaizTemplate> = {
       },
       defaultProps: { sobretitulo: "", titulo: "Descrição" },
       render: ({ sobretitulo, titulo }) => <B.Descricao sobretitulo={sobretitulo} titulo={titulo} />,
+    },
+    Badges: {
+      label: "Badges",
+      fields: {
+        tamanho: {
+          type: "select",
+          label: "Tamanho",
+          options: [
+            { label: "Pequeno (32 px)", value: 32 },
+            { label: "Médio (48 px)", value: 48 },
+            { label: "Grande (64 px)", value: 64 },
+          ],
+        },
+      },
+      defaultProps: { tamanho: 48 },
+      render: ({ tamanho }) => <B.Badges tamanho={tamanho} />,
     },
     PrecoPorUnidade: {
       label: "Quantidade e preço por kg / L / un",

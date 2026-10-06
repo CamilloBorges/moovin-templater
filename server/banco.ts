@@ -19,8 +19,12 @@ export type Sessao = {
 
 export type DocTemplate = { _id: string; conta: string; tipo: "rascunho" | "publicado"; dados: unknown; atualizadoEm: Date; atualizadoPor: string };
 
+// Badges (selos) da loja, associados aos produtos pelo Complemento (campo badges, com os ids).
+// A imagem fica na Moovin (dam-storage); aqui só o endereço dela.
+export type DocBadge = { _id: string; conta: string; nome: string; imagem: string; tooltip: string; link: string; atualizadoEm: Date; atualizadoPor: string };
+
 // O que a Moovin não tem, por produto: a descrição da página e os dados adicionais (resumo,
-// conteúdo comercial e abas). Os campos padrão (preço, categoria, estoque…) ficam só na Moovin,
+// conteúdo comercial, abas e badges). Os campos padrão (preço, categoria, estoque…) ficam só na Moovin,
 // e a descrição da Moovin guarda o texto para a IA de atendimento. A loja acha o produto pelo SKU.
 export type DocComplemento = { _id: string; conta: string; produtoId: string; skus: string[]; dados: unknown; atualizadoEm: Date; atualizadoPor: string };
 
@@ -43,8 +47,10 @@ export async function conectar() {
   await sessoes().createIndex({ expiraEm: 1 }, { expireAfterSeconds: 0 });
   await templates().createIndex({ conta: 1, tipo: 1 }, { unique: true });
   await complementos().createIndex({ conta: 1, skus: 1 });
+  await badges().createIndex({ conta: 1 });
 }
 
 export const sessoes = (): Collection<Sessao> => db.collection<Sessao>("sessoes");
 export const templates = (): Collection<DocTemplate> => db.collection<DocTemplate>("templates");
 export const complementos = (): Collection<DocComplemento> => db.collection<DocComplemento>("complementos");
+export const badges = (): Collection<DocBadge> => db.collection<DocBadge>("badges");

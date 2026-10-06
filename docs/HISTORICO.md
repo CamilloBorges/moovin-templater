@@ -167,6 +167,21 @@ Ainda não há backend, API de templates nem renderizador da loja.
 - **Testes:** Vitest com 29 testes, CI no GitHub Actions e servidor separado em `app.ts`/`index.ts`.
 - **Bug encontrado na hora de testar:** o renderizador da loja não conhecia o bloco "Descrição" criado na fase 6, e a descrição não apareceria na loja. Corrigido, e agora coberto pelo teste "conhece o bloco … do editor".
 
+## Fase 8 — Grupos recolhíveis e Badges (06/10/2026)
+
+- **Tela do produto:**
+  - no topo fica o nome do produto (com a chave Ativo ao lado);
+  - abaixo, "Campos do Moovin", recolhido por padrão, que abre sozinho com erro de validação;
+  - e "Campos Complementares", expandido.
+- **Badges:**
+  - cadastro com nome, imagem enviada para a Moovin (`dam-storage`), tooltip e link opcional;
+  - associação no produto, pelos ids no Complemento;
+  - bloco "Badges" no template, com balão ao passar o mouse; com link, abre em outra aba;
+  - no layout padrão, o bloco fica abaixo do título;
+  - excluir um badge o tira dos produtos;
+  - o repasse à Moovin aceita até 15 MB, por causa das imagens em base64.
+- **Testes:** 43.
+
 ## Próximos passos
 
 1. **Implantar (Camillo):** serviço Compose no EasyPanel a partir deste repositório e domínio **`templater.bomgado.net`** pelo túnel da Cloudflare apontando para `app:3001`. **Decisão de 06/10:** sem Cloudflare Access; o painel fica protegido só pelo login da Moovin. O caminho `/loja/*` precisa ficar **público** (sem Cloudflare Access), porque a loja o carrega no navegador do cliente.

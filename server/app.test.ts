@@ -73,7 +73,7 @@ describe("Complemento do produto", () => {
 
     const loja = await app.inject({ url: `/loja/${CONTA}/complemento/13926` });
     expect(loja.statusCode).toBe(200);
-    expect(loja.json()).toEqual({ complemento });
+    expect(loja.json()).toEqual({ complemento, badges: [] });
   });
 
   it("não vaza o Complemento de outra loja", async () => {
@@ -92,5 +92,43 @@ describe("Templates", () => {
     expect((await app.inject({ method: "PUT", url: "/api/templates/publicado", headers: { cookie }, payload: { dados } })).statusCode).toBe(200);
     const r = await app.inject({ url: `/loja/${CONTA}/produto.js` });
     expect(r.body.startsWith("window.__TEMPLATER_BOMGADO__=")).toBe(true);
+  });
+});
+
+describe("Badges", () => {
+  const badge = { nome: "Sem glúten", imagem: "https://storage.moovin.store/x/sg.png", tooltip: "Produto sem glúten", link: "" };
+  let id = "";
+
+  it("valida nome, imagem, tamanho do balão e link", async () => {
+    const enviar = (payload: object) => app.inject({ method: "POST", url: "/api/badges", headers: { cookie }, payload });
+    expect((await enviar({ ...badge, nome: " " })).json().erro).toMatch(/nome/);
+    expect((await enviar({ ...badge, imagem: "" })).json().erro).toMatch(/imagem/);
+    expect((await enviar({ ...badge, tooltip: "x".repeat(301) })).statusCode).toBe(400);
+    expect((await enviar({ ...badge, link: "javascript:alert(1)" })).json().erro).toMatch(/link/);
+  });
+
+  it("cadastra, lista e edita", async () => {
+    const criado = await app.inject({ method: "POST", url: "/api/badges", headers: { cookie }, payload: badge });
+    expect(criado.statusCode).toBe(200);
+    id = criado.json().id;
+    const lista = (await app.inject({ url: "/api/badges", headers: { cookie } })).json();
+    expect(lista).toEqual([{ id, ...badge }]);
+    const editado = await app.inject({ method: "PUT", url: `/api/badges/${id}`, headers: { cookie }, payload: { ...badge, link: "https://loja/sg" } });
+    expect(editado.json().link).toBe("https://loja/sg");
+  });
+
+  it("a loja recebe os badges do produto já resolvidos, na ordem escolhida", async () => {
+    const outro = (await app.inject({ method: "POST", url: "/api/badges", headers: { cookie }, payload: { ...badge, nome: "Grass fed" } })).json();
+    const dados = { resumo: "", descricao: "", conteudoComercial: null, abas: [], badges: [outro.id, id, "apagado"] };
+    await app.inject({ method: "PUT", url: "/api/complementos/p2", headers: { cookie }, payload: { dados, skus: ["777"] } });
+    const loja = (await app.inject({ url: `/loja/${CONTA}/complemento/777` })).json();
+    expect(loja.badges.map((b: { nome: string }) => b.nome)).toEqual(["Grass fed", "Sem glúten"]);
+  });
+
+  it("excluir tira o badge dos produtos", async () => {
+    expect((await app.inject({ method: "DELETE", url: `/api/badges/${id}`, headers: { cookie } })).statusCode).toBe(200);
+    const painel = (await app.inject({ url: "/api/complementos/p2", headers: { cookie } })).json();
+    expect(painel.dados.badges).not.toContain(id);
+    expect((await app.inject({ method: "DELETE", url: `/api/badges/${id}`, headers: { cookie } })).statusCode).toBe(404);
   });
 });

@@ -23,15 +23,20 @@ export type ComplementoProduto = {
   conteudoComercial: { quantidade: number; unidade: UnidadeConteudo } | null;
   resumo: string; // HTML
   descricao: string; // HTML: a descrição exibida na página (a da Moovin é o texto para a IA)
+  badges: string[]; // ids dos badges do produto, na ordem de exibição (cadastro em Badges)
   // Abas do produto, quantas forem necessárias. O template decide onde e como aparecem.
   abas: Aba[];
 };
 
 export type Aba = { titulo: string; conteudo: string }; // conteúdo em HTML
 
+// Badge (selo) cadastrado no painel. A imagem fica na Moovin; o link, se houver, abre em outra aba.
+export type Badge = { id: string; nome: string; imagem: string; tooltip: string; link: string };
+
 export type ProdutoTemplate = {
   moovin: ProdutoMoovin;
   complemento: ComplementoProduto;
+  badges: Badge[]; // os badges do produto, já com os dados do cadastro
 };
 
 export function formatarMoeda(valor: number) {
@@ -57,7 +62,12 @@ export function textoUnidade(conteudo: ComplementoProduto["conteudoComercial"]) 
   return `Unidade de ${valor.toLocaleString("pt-BR", { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${rotulo}`;
 }
 
-export function paraTemplate(produto: ProdutoCadastro): ProdutoTemplate {
+// Badges do produto, na ordem escolhida, a partir do cadastro completo.
+export function resolverBadges(ids: string[], todos: Badge[]): Badge[] {
+  return ids.map((id) => todos.find((b) => b.id === id)).filter((b): b is Badge => !!b);
+}
+
+export function paraTemplate(produto: ProdutoCadastro, todosBadges: Badge[] = []): ProdutoTemplate {
   const variacao = produto.variacoes[0];
   return {
     moovin: {
@@ -70,5 +80,6 @@ export function paraTemplate(produto: ProdutoCadastro): ProdutoTemplate {
       avaliacao: { nota: 0, total: 0 }, // avaliações vêm da loja, não do cadastro
     },
     complemento: produto.complemento,
+    badges: resolverBadges(produto.complemento.badges, todosBadges),
   };
 }

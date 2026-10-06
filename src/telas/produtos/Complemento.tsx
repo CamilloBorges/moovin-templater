@@ -52,14 +52,6 @@ export function SecoesComplemento({ complemento, preco, migrar, aoMudar }: {
 
   return (
     <>
-      <div className="divisor-complemento">
-        <h2>Complemento do cadastro</h2>
-        <p>
-          O que a página da loja mostra além dos campos da Moovin. Fica guardado no Templater (não na Moovin); a descrição
-          da Moovin recebe o texto para a IA, no topo desta página.
-        </p>
-      </div>
-
       {migrar && (
         <p className="aviso">
           Este produto ainda não tem Complemento no Templater: os campos abaixo foram lidos da descrição da Moovin. Ao salvar,

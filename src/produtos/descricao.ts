@@ -42,7 +42,7 @@ function montarTexto(c: ComplementoProduto): string {
 
 // Formato antigo do Script_Produto V3: MODO NOVO / RESUMO DO PRODUTO / DETALHES DO PRODUTO / @ Aba.
 function lerFormatoAntigo(blocos: Element[]): ComplementoProduto {
-  const c: ComplementoProduto = { conteudoComercial: null, resumo: "", descricao: "", abas: [] };
+  const c = complementoVazio();
   let parte: "inicio" | "resumo" | "detalhes" = "inicio";
   let atual: Aba | null = null;
   const soltos: string[] = []; // conteúdo de DETALHES antes da primeira aba
@@ -69,7 +69,7 @@ function lerFormatoAntigo(blocos: Element[]): ComplementoProduto {
   return c;
 }
 
-export const complementoVazio = (): ComplementoProduto => ({ conteudoComercial: null, resumo: "", descricao: "", abas: [] });
+export const complementoVazio = (): ComplementoProduto => ({ conteudoComercial: null, resumo: "", descricao: "", abas: [], badges: [] });
 
 // Migração: Complemento a partir da descrição da Moovin. Descrição comum (sem a convenção)
 // vira a descrição da página, sem resumo nem abas.
@@ -85,7 +85,7 @@ function lerDescricao(html: string): { complemento: ComplementoProduto; formatoA
   const blocos = Array.from(doc.body.children);
   if (blocos.some((el) => texto(el).toUpperCase() === "MODO NOVO")) return { complemento: lerFormatoAntigo(blocos), formatoAntigo: true };
 
-  const c: ComplementoProduto = { conteudoComercial: null, resumo: "", descricao: "", abas: [] };
+  const c = complementoVazio();
   let atual: Aba | null = null;
   for (const el of blocos) {
     if (el.tagName === "H2") {

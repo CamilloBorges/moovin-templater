@@ -7,6 +7,7 @@ import { BarraDeAcoes, BotaoModoPrevia, Estrutura } from "../templater/estrutura
 import { carregarTemplate, salvarTemplate, templatePadrao, type TemplateData } from "../templater/padrao";
 import { formatarMoeda, paraTemplate, type ProdutoTemplate } from "../templater/produto";
 import { PreviaPagina } from "../componentes/PreviaPagina";
+import { listarBadges } from "../produtos/badges";
 
 const viewports = [
   { width: 1280, label: "Desktop", icon: "Monitor" as const },
@@ -83,8 +84,8 @@ export function Templater({ fechar }: { fechar: () => void }) {
 
   function escolherProduto(id: string) {
     setSeletor(false);
-    carregarProduto(id).then(
-      (o) => { setProduto({ id, nome: o.cadastro.nome, template: paraTemplate(o.cadastro) }); gravarExemplo(id); },
+    Promise.all([carregarProduto(id), listarBadges().catch(() => [])]).then(
+      ([o, badges]) => { setProduto({ id, nome: o.cadastro.nome, template: paraTemplate(o.cadastro, badges) }); gravarExemplo(id); },
       (e) => setErro(`Não foi possível carregar o produto: ${e.message}`),
     );
   }

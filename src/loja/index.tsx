@@ -1,7 +1,7 @@
 import { createRoot, type Root } from "react-dom/client";
 import css from "../templater/pagina.css?inline";
 import type { TemplateData } from "../templater/padrao";
-import type { ComplementoProduto } from "../templater/produto";
+import type { Badge, ComplementoProduto } from "../templater/produto";
 import { criarLigacao, encontrar, extrairProduto, lerCodigo, temEscolhaDeVariacao } from "./nativo";
 import { Pagina } from "./Pagina";
 
@@ -23,16 +23,19 @@ const OCULTO = "data-templater-oculto";
 // Endereço da loja no nosso servidor, tirado do próprio script (…/loja/<conta>/produto.js).
 const BASE = ((document.currentScript as HTMLScriptElement | null)?.src ?? "").replace(/\/produto\.js(\?.*)?$/, "");
 
-// Complemento do produto aberto: undefined = buscando; null = não tem (layout da Moovin).
-let busca: { chave: string; complemento: ComplementoProduto | null | undefined } | null = null;
-function complementoDe(sku: string, aoChegar: () => void): ComplementoProduto | null | undefined {
+// Complemento do produto aberto (com os badges): undefined = buscando; null = não tem (layout da Moovin).
+type Dados = { complemento: ComplementoProduto; badges: Badge[] };
+let busca: { chave: string; complemento: Dados | null | undefined } | null = null;
+function complementoDe(sku: string, aoChegar: () => void): Dados | null | undefined {
   const chave = `${location.pathname}|${sku}`;
   if (busca?.chave === chave) return busca.complemento;
   const atual: NonNullable<typeof busca> = { chave, complemento: undefined };
   busca = atual;
   fetch(`${BASE}/complemento/${encodeURIComponent(sku)}`)
     .then((r) => (r.ok ? r.json() : null))
-    .then((d: { complemento?: ComplementoProduto } | null) => { atual.complemento = d?.complemento ?? null; })
+    .then((d: { complemento?: ComplementoProduto; badges?: Badge[] } | null) => {
+      atual.complemento = d?.complemento ? { complemento: { ...d.complemento, badges: d.complemento.badges ?? [] }, badges: d.badges ?? [] } : null;
+    })
     .catch(() => { atual.complemento = null; })
     .finally(aoChegar);
   return undefined;
@@ -57,9 +60,9 @@ function sincronizar(template: TemplateData, agendar: () => void) {
   if (!nativo || temEscolhaDeVariacao(nativo)) return;
   const sku = lerCodigo(nativo);
   if (!sku || !BASE) return;
-  const complemento = complementoDe(sku, agendar);
-  if (!complemento) return;
-  const produto = extrairProduto(nativo, complemento);
+  const dados = complementoDe(sku, agendar);
+  if (!dados) return;
+  const produto = extrairProduto(nativo, dados.complemento, dados.badges);
   if (!produto.moovin.nome) return;
 
   const container = document.createElement("div");

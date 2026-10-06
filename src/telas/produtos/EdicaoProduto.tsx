@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ErroApi } from "../../api";
 import { carregarCatalogo, type Catalogo } from "../../produtos/catalogo";
 import type { ProdutoCadastro, Variacao } from "../../produtos/modelo";
 import { carregarProduto, salvarProduto, type Original } from "../../produtos/moovin";
 import { templatePublicado, type TemplateData } from "../../templater/padrao";
-import { formatarMoeda, paraTemplate, URL_LOJA as LOJA } from "../../templater/produto";
+import { formatarMoeda, paraTemplate, URL_LOJA as LOJA, type Badge } from "../../templater/produto";
+import { listarBadges } from "../../produtos/badges";
 import { Alternador, Campo, CampoReferencia, Numero, Secao, Texto } from "./campos";
 import { SecoesComplemento } from "./Complemento";
 import { SecaoImagens } from "./Imagens";
@@ -30,23 +31,65 @@ function validar(p: ProdutoCadastro): Record<string, string> {
   return erros;
 }
 
-function PreviaProduto({ produto, fechar }: { produto: ProdutoCadastro; fechar: () => void }) {
+function PreviaProduto({ produto, badges, fechar }: { produto: ProdutoCadastro; badges: Badge[]; fechar: () => void }) {
   const [template, setTemplate] = useState<TemplateData | null>(null);
   useEffect(() => { templatePublicado().then(setTemplate); }, []);
-  return <PreviaPagina titulo="Prévia com o template publicado" template={template} produto={paraTemplate(produto)} fechar={fechar} />;
+  return <PreviaPagina titulo="Prévia com o template publicado" template={template} produto={paraTemplate(produto, badges)} fechar={fechar} />;
+}
+
+// Grupo recolhível da tela do produto (Campos do Moovin / Campos Complementares).
+function Grupo({ titulo, descricao, aberto, aoAlternar, children }: {
+  titulo: string;
+  descricao: string;
+  aberto: boolean;
+  aoAlternar: (aberto: boolean) => void;
+  children: ReactNode;
+}) {
+  return (
+    <details className="grupo-campos" open={aberto} onToggle={(e) => aoAlternar(e.currentTarget.open)}>
+      <summary>
+        <strong>{titulo}</strong>
+        <small>{descricao}</small>
+      </summary>
+      <div className="grupo-conteudo">{children}</div>
+    </details>
+  );
+}
+
+// Badges do produto: escolha entre os cadastrados, na ordem em que foram marcados.
+function SecaoBadges({ selecionados, todos, aoMudar }: { selecionados: string[]; todos: Badge[]; aoMudar: (ids: string[]) => void }) {
+  const alternar = (id: string) => aoMudar(selecionados.includes(id) ? selecionados.filter((x) => x !== id) : [...selecionados, id]);
+  return (
+    <Secao titulo="Badges" descricao="Selos exibidos pelo bloco Badges do template, na ordem em que forem marcados.">
+      {todos.length === 0 ? (
+        <p className="campo-dica">Nenhum badge cadastrado. <a href="#/badges">Cadastrar badges</a></p>
+      ) : (
+        <div className="badges-escolha">
+          {todos.map((b) => (
+            <label key={b.id} className={selecionados.includes(b.id) ? "badge-opcao marcado" : "badge-opcao"} title={b.tooltip}>
+              <input type="checkbox" checked={selecionados.includes(b.id)} onChange={() => alternar(b.id)} />
+              <img src={b.imagem} alt="" />
+              <span>{b.nome}</span>
+              {selecionados.includes(b.id) && <b>{selecionados.indexOf(b.id) + 1}</b>}
+            </label>
+          ))}
+        </div>
+      )}
+    </Secao>
+  );
 }
 
 // Carrega o produto da Moovin (com o complemento) e o catálogo de apoio.
 export function EdicaoProduto({ id }: { id: string }) {
-  const [dados, setDados] = useState<{ original: Original; catalogo: Catalogo } | null>(null);
+  const [dados, setDados] = useState<{ original: Original; catalogo: Catalogo; badges: Badge[] } | null>(null);
   const [erro, setErro] = useState("");
   const [carga, setCarga] = useState(0);
   const [mensagem, setMensagem] = useState(""); // resultado do último salvamento, mostrado após reler
   useEffect(() => {
     setErro("");
     setDados(null); // o formulário só monta de novo com o produto relido
-    Promise.all([carregarProduto(id), carregarCatalogo()]).then(
-      ([original, catalogo]) => setDados({ original, catalogo }),
+    Promise.all([carregarProduto(id), carregarCatalogo(), listarBadges().catch(() => [] as Badge[])]).then(
+      ([original, catalogo, badges]) => setDados({ original, catalogo, badges }),
       (e) => setErro(e instanceof ErroApi && e.status === 404 ? "Produto não encontrado na Moovin." : `Não foi possível carregar o produto: ${e.message}`),
     );
   }, [id, carga]);
@@ -57,15 +100,17 @@ export function EdicaoProduto({ id }: { id: string }) {
       key={carga}
       original={dados.original}
       catalogo={dados.catalogo}
+      todosBadges={dados.badges}
       avisoInicial={mensagem}
       recarregar={(texto) => { setMensagem(texto); setCarga((c) => c + 1); }}
     />
   );
 }
 
-function FormularioProduto({ original, catalogo, avisoInicial, recarregar }: {
+function FormularioProduto({ original, catalogo, todosBadges, avisoInicial, recarregar }: {
   original: Original;
   catalogo: Catalogo;
+  todosBadges: Badge[];
   avisoInicial: string;
   recarregar: (mensagem: string) => void;
 }) {
@@ -77,6 +122,8 @@ function FormularioProduto({ original, catalogo, avisoInicial, recarregar }: {
   const [salvando, setSalvando] = useState(false);
   const [erroSalvar, setErroSalvar] = useState("");
   const [aviso, setAviso] = useState(avisoInicial);
+  const [moovinAberto, setMoovinAberto] = useState(false);
+  const [complementaresAberto, setComplementaresAberto] = useState(true);
   // Remonta os editores de texto ao descartar alterações (eles só leem o valor ao montar).
   const [versao, setVersao] = useState(0);
 
@@ -105,6 +152,7 @@ function FormularioProduto({ original, catalogo, avisoInicial, recarregar }: {
     if (Object.keys(erros).length) {
       setMostrarErros(true);
       setAviso("Corrija os campos destacados antes de salvar.");
+      if (Object.keys(erros).some((campo) => campo !== "nome")) setMoovinAberto(true); // os demais erros são de campos da Moovin
       return;
     }
     setSalvando(true);
@@ -151,176 +199,189 @@ function FormularioProduto({ original, catalogo, avisoInicial, recarregar }: {
           </div>
         )}
 
-        <Secao titulo="Informações principais" extra={<Alternador ligado={produto.ativo} aoMudar={(ativo) => alterar({ ativo })} rotulo={produto.ativo ? "Ativo" : "Inativo"} />}>
+        <Secao titulo="Produto" extra={<Alternador ligado={produto.ativo} aoMudar={(ativo) => alterar({ ativo })} rotulo={produto.ativo ? "Ativo" : "Inativo"} />}>
           <Campo rotulo="Nome do produto" obrigatorio logus erro={errosVisiveis.nome}>
             <Texto valor={produto.nome} aoMudar={(nome) => alterar({ nome })} />
           </Campo>
-          <Campo rotulo="Descrição para a IA de atendimento (descrição na Moovin)">
-            <EditorTexto valor={produto.descricao} aoMudar={(descricao) => alterar({ descricao })} />
-          </Campo>
-          <div className="linha-acoes">
-            <small className="campo-dica">
-              Lida pela IA do Moovin Desk e pelos feeds. Gerada a partir do Complemento (fim desta página), só com o que a Moovin não
-              tem nos outros campos; pode ser ajustada à mão. Não é mostrada na página da loja.
-            </small>
-            <button type="button" className="button button-secondary" onClick={() => { alterar({ descricao: descricaoParaIa(produto) }); setVersao((v) => v + 1); }}>
-              Gerar de novo
-            </button>
-          </div>
         </Secao>
 
-        <Secao titulo="Organização">
-          <div className="linha-campos">
-            <Campo rotulo="Categoria principal" logus>
-              <CampoReferencia
-                opcoes={categorias}
-                valor={produto.categoriaPrincipal}
-                rotuloDe={(c) => caminhoDaCategoria(c.id) || c.nome}
-                placeholder="Selecione a categoria"
-                aoMudar={(categoriaPrincipal) =>
-                  alterar(categoriaPrincipal ? { categoriaPrincipal } : { categoriaPrincipal: null, categoriasAdicionais: [] })
-                }
-              />
+        <Grupo titulo="Campos do Moovin" descricao="Cadastro padrão da Moovin: descrição para a IA, organização, variações, preços, frete, imagens, características, SEO e visibilidade." aberto={moovinAberto} aoAlternar={setMoovinAberto}>
+          <Secao titulo="Descrição para a IA de atendimento" descricao="É a descrição do produto na Moovin.">
+            <Campo rotulo="Texto">
+              <EditorTexto valor={produto.descricao} aoMudar={(descricao) => alterar({ descricao })} />
             </Campo>
-            <Campo rotulo="Marca" obrigatorio erro={errosVisiveis.marca}>
-              <CampoReferencia opcoes={marcas} valor={produto.marca} placeholder="Selecione a marca" aoMudar={(marca) => alterar({ marca })} />
-            </Campo>
-          </div>
-          <div className="campo">
-            <span className="campo-rotulo">Mais categorias</span>
-            {produto.categoriaPrincipal ? (
-              <div className="fichas">
-                {produto.categoriasAdicionais.map((c) => (
-                  <span className="ficha" key={c.id}>
-                    {caminhoDaCategoria(c.id) || c.nome}
-                    <button type="button" title="Remover categoria" onClick={() => alterar({ categoriasAdicionais: produto.categoriasAdicionais.filter((x) => x.id !== c.id) })}>×</button>
-                  </span>
-                ))}
-                <CampoReferencia
-                  key={produto.categoriasAdicionais.length}
-                  opcoes={categorias.filter((c) => c.id !== produto.categoriaPrincipal?.id && !produto.categoriasAdicionais.some((x) => x.id === c.id))}
-                  valor={null}
-                  rotuloDe={(c) => caminhoDaCategoria(c.id) || c.nome}
-                  placeholder="Vincular mais categorias"
-                  aoMudar={(c) => c && c.id !== produto.categoriaPrincipal?.id && alterar({ categoriasAdicionais: [...produto.categoriasAdicionais, c] })}
-                />
-              </div>
-            ) : (
-              <small className="campo-dica">Escolha a categoria principal para vincular outras.</small>
-            )}
-          </div>
-        </Secao>
-
-        <SecaoVariacoes produto={produto} alterar={alterar} erros={errosVisiveis} atributosVariacao={atributos} />
-
-        {!produto.possuiVariacoes && (
-          <Secao titulo="Preços" descricao="Com o preço zerado, a loja mostra o botão “Preço sob consulta”.">
-            <div className="linha-campos">
-              <Campo rotulo="Preço do produto" logus>
-                <Numero unidade="R$" passo={0.01} valor={unica.preco.venda} aoMudar={(venda) => alterarUnica({ preco: { ...unica.preco, venda } })} />
-              </Campo>
-              <Campo rotulo="Preço promocional" erro={errosVisiveis["promo-0"]}>
-                <Numero unidade="R$" passo={0.01} valor={unica.preco.promocional} aoMudar={(promocional) => alterarUnica({ preco: { ...unica.preco, promocional } })} />
-              </Campo>
-              <Campo rotulo="Preço de custo">
-                <Numero unidade="R$" passo={0.01} valor={unica.preco.custo} aoMudar={(custo) => alterarUnica({ preco: { ...unica.preco, custo } })} />
-              </Campo>
-              <Campo rotulo="Margem">
-                <output className="valor-calculado">{margem === null ? "—" : `${margem.toFixed(2).replace(".", ",")} %`}</output>
-              </Campo>
-              <Campo rotulo="Lucro">
-                <output className="valor-calculado">{unica.preco.custo > 0 ? formatarMoeda(lucro) : "—"}</output>
-              </Campo>
+            <div className="linha-acoes">
+              <small className="campo-dica">
+                Lida pela IA do Moovin Desk e pelos feeds. Gerada a partir do Complemento (fim desta página), só com o que a Moovin não
+                tem nos outros campos; pode ser ajustada à mão. Não é mostrada na página da loja.
+              </small>
+              <button type="button" className="button button-secondary" onClick={() => { alterar({ descricao: descricaoParaIa(produto) }); setVersao((v) => v + 1); }}>
+                Gerar de novo
+              </button>
             </div>
-            {unica.preco.venda === 0 && <p className="aviso">Preço zerado: a loja vai mostrar “Preço sob consulta”.</p>}
           </Secao>
-        )}
 
-        <Secao
-          titulo="Dimensões da embalagem"
-          descricao={`Usadas para calcular o frete.${produto.possuiVariacoes ? " Valem para todas as variações." : ""}`}
-        >
-          <div className="linha-campos">
-            <Campo rotulo="Peso"><Numero unidade="g" valor={dimensoes.pesoG} aoMudar={(pesoG) => alterarTodas({ dimensoes: { ...dimensoes, pesoG } })} /></Campo>
-            <Campo rotulo="Altura"><Numero unidade="cm" valor={dimensoes.alturaCm} aoMudar={(alturaCm) => alterarTodas({ dimensoes: { ...dimensoes, alturaCm } })} /></Campo>
-            <Campo rotulo="Largura"><Numero unidade="cm" valor={dimensoes.larguraCm} aoMudar={(larguraCm) => alterarTodas({ dimensoes: { ...dimensoes, larguraCm } })} /></Campo>
-            <Campo rotulo="Profundidade"><Numero unidade="cm" valor={dimensoes.profundidadeCm} aoMudar={(profundidadeCm) => alterarTodas({ dimensoes: { ...dimensoes, profundidadeCm } })} /></Campo>
-            <Campo rotulo="Disponibilidade da entrega">
-              <select
-                className="entrada"
-                value={prazoPersonalizado ? "p" : String(prazo)}
-                onChange={(e) => {
-                  const personalizado = e.target.value === "p";
-                  setPrazoPersonalizado(personalizado);
-                  if (!personalizado) alterarTodas({ prazoExtraDias: Number(e.target.value) });
-                }}
-              >
-                <option value="0">Imediata</option>
-                {[1, 2, 3, 4, 5].map((d) => <option key={d} value={d}>{d} {d === 1 ? "dia útil" : "dias úteis"}</option>)}
-                <option value="p">Personalizada</option>
-              </select>
-            </Campo>
-            {prazoPersonalizado && (
-              <Campo rotulo="Dias a mais para enviar">
-                <Numero unidade="dias" valor={prazo} aoMudar={(prazoExtraDias) => alterarTodas({ prazoExtraDias })} />
-              </Campo>
-            )}
-          </div>
-          {semDimensoes && <p className="aviso">A Moovin exige todas as dimensões para calcular o frete.</p>}
-        </Secao>
-
-        <SecaoImagens produto={produto} alterar={alterar} />
-
-        <Secao titulo="Características do produto">
-          {caracteristicasDaCategoria.length === 0 ? (
-            <p className="vazio">Você não possui características relacionadas a esta categoria.</p>
-          ) : (
+          <Secao titulo="Organização">
             <div className="linha-campos">
-              {caracteristicasDaCategoria.map((c) => (
-                <Campo rotulo={c.nome} key={c.id}>
-                  {c.tipo === "lista" ? (
-                    <select className="entrada" value={produto.caracteristicas[c.id] ?? ""} onChange={(e) => alterar({ caracteristicas: { ...produto.caracteristicas, [c.id]: e.target.value } })}>
-                      <option value="">—</option>
-                      {c.valores.map((v) => <option key={v}>{v}</option>)}
-                    </select>
-                  ) : (
-                    <Texto valor={produto.caracteristicas[c.id] ?? ""} aoMudar={(v) => alterar({ caracteristicas: { ...produto.caracteristicas, [c.id]: v } })} />
-                  )}
-                </Campo>
-              ))}
+              <Campo rotulo="Categoria principal" logus>
+                <CampoReferencia
+                  opcoes={categorias}
+                  valor={produto.categoriaPrincipal}
+                  rotuloDe={(c) => caminhoDaCategoria(c.id) || c.nome}
+                  placeholder="Selecione a categoria"
+                  aoMudar={(categoriaPrincipal) =>
+                    alterar(categoriaPrincipal ? { categoriaPrincipal } : { categoriaPrincipal: null, categoriasAdicionais: [] })
+                  }
+                />
+              </Campo>
+              <Campo rotulo="Marca" obrigatorio erro={errosVisiveis.marca}>
+                <CampoReferencia opcoes={marcas} valor={produto.marca} placeholder="Selecione a marca" aoMudar={(marca) => alterar({ marca })} />
+              </Campo>
             </div>
+            <div className="campo">
+              <span className="campo-rotulo">Mais categorias</span>
+              {produto.categoriaPrincipal ? (
+                <div className="fichas">
+                  {produto.categoriasAdicionais.map((c) => (
+                    <span className="ficha" key={c.id}>
+                      {caminhoDaCategoria(c.id) || c.nome}
+                      <button type="button" title="Remover categoria" onClick={() => alterar({ categoriasAdicionais: produto.categoriasAdicionais.filter((x) => x.id !== c.id) })}>×</button>
+                    </span>
+                  ))}
+                  <CampoReferencia
+                    key={produto.categoriasAdicionais.length}
+                    opcoes={categorias.filter((c) => c.id !== produto.categoriaPrincipal?.id && !produto.categoriasAdicionais.some((x) => x.id === c.id))}
+                    valor={null}
+                    rotuloDe={(c) => caminhoDaCategoria(c.id) || c.nome}
+                    placeholder="Vincular mais categorias"
+                    aoMudar={(c) => c && c.id !== produto.categoriaPrincipal?.id && alterar({ categoriasAdicionais: [...produto.categoriasAdicionais, c] })}
+                  />
+                </div>
+              ) : (
+                <small className="campo-dica">Escolha a categoria principal para vincular outras.</small>
+              )}
+            </div>
+          </Secao>
+
+          <SecaoVariacoes produto={produto} alterar={alterar} erros={errosVisiveis} atributosVariacao={atributos} />
+
+          {!produto.possuiVariacoes && (
+            <Secao titulo="Preços" descricao="Com o preço zerado, a loja mostra o botão “Preço sob consulta”.">
+              <div className="linha-campos">
+                <Campo rotulo="Preço do produto" logus>
+                  <Numero unidade="R$" passo={0.01} valor={unica.preco.venda} aoMudar={(venda) => alterarUnica({ preco: { ...unica.preco, venda } })} />
+                </Campo>
+                <Campo rotulo="Preço promocional" erro={errosVisiveis["promo-0"]}>
+                  <Numero unidade="R$" passo={0.01} valor={unica.preco.promocional} aoMudar={(promocional) => alterarUnica({ preco: { ...unica.preco, promocional } })} />
+                </Campo>
+                <Campo rotulo="Preço de custo">
+                  <Numero unidade="R$" passo={0.01} valor={unica.preco.custo} aoMudar={(custo) => alterarUnica({ preco: { ...unica.preco, custo } })} />
+                </Campo>
+                <Campo rotulo="Margem">
+                  <output className="valor-calculado">{margem === null ? "—" : `${margem.toFixed(2).replace(".", ",")} %`}</output>
+                </Campo>
+                <Campo rotulo="Lucro">
+                  <output className="valor-calculado">{unica.preco.custo > 0 ? formatarMoeda(lucro) : "—"}</output>
+                </Campo>
+              </div>
+              {unica.preco.venda === 0 && <p className="aviso">Preço zerado: a loja vai mostrar “Preço sob consulta”.</p>}
+            </Secao>
           )}
-        </Secao>
 
-        <Secao titulo="SEO" descricao="Como o produto aparece no Google. Em branco, a loja usa o nome e a descrição.">
-          <Campo rotulo="Meta title" dica={`${produto.seo.titulo.length}/70 caracteres`}>
-            <Texto valor={produto.seo.titulo} maxLength={70} placeholder={produto.nome} aoMudar={(titulo) => alterar({ seo: { ...produto.seo, titulo } })} />
-          </Campo>
-          <Campo rotulo="URL do produto" dica="Definida pela Moovin. Mudar o endereço fica no painel dela, para não quebrar links já publicados.">
-            <input className="entrada" value={`${LOJA}/${url}/p`} readOnly />
-          </Campo>
-          <Campo rotulo="Meta description" dica={`${produto.seo.descricao.length}/160 caracteres`}>
-            <textarea className="entrada" rows={3} maxLength={160} value={produto.seo.descricao} onChange={(e) => alterar({ seo: { ...produto.seo, descricao: e.target.value } })} />
-          </Campo>
-        </Secao>
+          <Secao
+            titulo="Dimensões da embalagem"
+            descricao={`Usadas para calcular o frete.${produto.possuiVariacoes ? " Valem para todas as variações." : ""}`}
+          >
+            <div className="linha-campos">
+              <Campo rotulo="Peso"><Numero unidade="g" valor={dimensoes.pesoG} aoMudar={(pesoG) => alterarTodas({ dimensoes: { ...dimensoes, pesoG } })} /></Campo>
+              <Campo rotulo="Altura"><Numero unidade="cm" valor={dimensoes.alturaCm} aoMudar={(alturaCm) => alterarTodas({ dimensoes: { ...dimensoes, alturaCm } })} /></Campo>
+              <Campo rotulo="Largura"><Numero unidade="cm" valor={dimensoes.larguraCm} aoMudar={(larguraCm) => alterarTodas({ dimensoes: { ...dimensoes, larguraCm } })} /></Campo>
+              <Campo rotulo="Profundidade"><Numero unidade="cm" valor={dimensoes.profundidadeCm} aoMudar={(profundidadeCm) => alterarTodas({ dimensoes: { ...dimensoes, profundidadeCm } })} /></Campo>
+              <Campo rotulo="Disponibilidade da entrega">
+                <select
+                  className="entrada"
+                  value={prazoPersonalizado ? "p" : String(prazo)}
+                  onChange={(e) => {
+                    const personalizado = e.target.value === "p";
+                    setPrazoPersonalizado(personalizado);
+                    if (!personalizado) alterarTodas({ prazoExtraDias: Number(e.target.value) });
+                  }}
+                >
+                  <option value="0">Imediata</option>
+                  {[1, 2, 3, 4, 5].map((d) => <option key={d} value={d}>{d} {d === 1 ? "dia útil" : "dias úteis"}</option>)}
+                  <option value="p">Personalizada</option>
+                </select>
+              </Campo>
+              {prazoPersonalizado && (
+                <Campo rotulo="Dias a mais para enviar">
+                  <Numero unidade="dias" valor={prazo} aoMudar={(prazoExtraDias) => alterarTodas({ prazoExtraDias })} />
+                </Campo>
+              )}
+            </div>
+            {semDimensoes && <p className="aviso">A Moovin exige todas as dimensões para calcular o frete.</p>}
+          </Secao>
 
-        <Secao titulo="Visibilidade" extra={<Alternador ligado={produto.visivelApenasPorLink} aoMudar={(visivelApenasPorLink) => alterar({ visivelApenasPorLink })} rotulo="Visível apenas por link" />}>
-          <p className="campo-dica">
-            Quando ativado, o produto não aparece na busca, categorias, vitrines e listagens da loja, nem nos feeds de integração (Google Shopping e Meta Shopping). Só pode ser acessado pelo link direto.
-          </p>
-          <p className="link-produto">Link do produto: <a href={`${LOJA}/${url}/p`} target="_blank" rel="noreferrer">{`${LOJA}/${url}/p`}</a></p>
-        </Secao>
+          <SecaoImagens produto={produto} alterar={alterar} />
 
-        <SecoesComplemento
-          complemento={produto.complemento}
-          preco={precoEfetivo}
-          migrar={original.migrar}
-          aoMudar={(complemento) => alterar({ complemento })}
-        />
+          <Secao titulo="Características do produto">
+            {caracteristicasDaCategoria.length === 0 ? (
+              <p className="vazio">Você não possui características relacionadas a esta categoria.</p>
+            ) : (
+              <div className="linha-campos">
+                {caracteristicasDaCategoria.map((c) => (
+                  <Campo rotulo={c.nome} key={c.id}>
+                    {c.tipo === "lista" ? (
+                      <select className="entrada" value={produto.caracteristicas[c.id] ?? ""} onChange={(e) => alterar({ caracteristicas: { ...produto.caracteristicas, [c.id]: e.target.value } })}>
+                        <option value="">—</option>
+                        {c.valores.map((v) => <option key={v}>{v}</option>)}
+                      </select>
+                    ) : (
+                      <Texto valor={produto.caracteristicas[c.id] ?? ""} aoMudar={(v) => alterar({ caracteristicas: { ...produto.caracteristicas, [c.id]: v } })} />
+                    )}
+                  </Campo>
+                ))}
+              </div>
+            )}
+          </Secao>
+
+          <Secao titulo="SEO" descricao="Como o produto aparece no Google. Em branco, a loja usa o nome e a descrição.">
+            <Campo rotulo="Meta title" dica={`${produto.seo.titulo.length}/70 caracteres`}>
+              <Texto valor={produto.seo.titulo} maxLength={70} placeholder={produto.nome} aoMudar={(titulo) => alterar({ seo: { ...produto.seo, titulo } })} />
+            </Campo>
+            <Campo rotulo="URL do produto" dica="Definida pela Moovin. Mudar o endereço fica no painel dela, para não quebrar links já publicados.">
+              <input className="entrada" value={`${LOJA}/${url}/p`} readOnly />
+            </Campo>
+            <Campo rotulo="Meta description" dica={`${produto.seo.descricao.length}/160 caracteres`}>
+              <textarea className="entrada" rows={3} maxLength={160} value={produto.seo.descricao} onChange={(e) => alterar({ seo: { ...produto.seo, descricao: e.target.value } })} />
+            </Campo>
+          </Secao>
+
+          <Secao titulo="Visibilidade" extra={<Alternador ligado={produto.visivelApenasPorLink} aoMudar={(visivelApenasPorLink) => alterar({ visivelApenasPorLink })} rotulo="Visível apenas por link" />}>
+            <p className="campo-dica">
+              Quando ativado, o produto não aparece na busca, categorias, vitrines e listagens da loja, nem nos feeds de integração (Google Shopping e Meta Shopping). Só pode ser acessado pelo link direto.
+            </p>
+            <p className="link-produto">Link do produto: <a href={`${LOJA}/${url}/p`} target="_blank" rel="noreferrer">{`${LOJA}/${url}/p`}</a></p>
+          </Secao>
+
+        </Grupo>
+
+        <Grupo titulo="Campos Complementares" descricao="O que a Moovin não tem: descrição da página, resumo, conteúdo comercial, abas e badges. Guardados no Templater." aberto={complementaresAberto} aoAlternar={setComplementaresAberto}>
+          <SecoesComplemento
+            complemento={produto.complemento}
+            preco={precoEfetivo}
+            migrar={original.migrar}
+            aoMudar={(complemento) => alterar({ complemento })}
+          />
+          <SecaoBadges
+            selecionados={produto.complemento.badges}
+            todos={todosBadges}
+            aoMudar={(badges) => alterar({ complemento: { ...produto.complemento, badges } })}
+          />
+        </Grupo>
 
       </div>
 
-      {previa && <PreviaProduto produto={produto} fechar={() => setPrevia(false)} />}
+      {previa && <PreviaProduto produto={produto} badges={todosBadges} fechar={() => setPrevia(false)} />}
     </>
   );
 }
