@@ -47,7 +47,6 @@
 .tpl-texto { margin: 0; line-height: 1.6; }
 .tpl-vazio { padding: 12px; border: 1px dashed #c9b48a; border-radius: 10px; color: #8a7650; font-size: 12px; text-align: center; }
 
-}
 
 /* Botões e partes interativas */
 .tpl button { font: inherit; color: inherit; cursor: pointer; }
@@ -78,3 +77,4 @@ button.tpl-compartilhar { background: #fff; }
   .tpl-detalhes h2 { font-size: 24px; }
   .tpl-abas-painel { padding: 20px 18px; font-size: 14px; }
   .tpl-barra-fixa small { display: none; }
+}
