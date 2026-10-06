@@ -7,8 +7,9 @@
     "dev": "concurrently -k -n web,api -c green,blue \"vite\" \"tsx watch server/index.ts\"",
     "dev:web": "vite",
     "dev:api": "tsx watch server/index.ts",
-    "build": "tsc -b && tsc -p tsconfig.server.json && vite build",
-    "preview": "vite preview"
+    "build": "tsc -b && tsc -p tsconfig.server.json && vite build && vite build -c vite.loja.config.ts",
+    "preview": "vite preview",
+    "build:loja": "vite build -c vite.loja.config.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.2",

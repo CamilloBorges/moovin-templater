@@ -1,9 +1,9 @@
-import { useState, type CSSProperties } from "react";
 import type { Config, Slot } from "@puckeditor/core";
-import DOMPurify from "dompurify";
-import { formatarMoeda, precoPorUnidade, type Aba, type ProdutoTemplate } from "./produto";
+import * as B from "./blocos";
+import type { ProdutoTemplate } from "./produto";
 
-// Blocos do template da página de produto. Os blocos de "Produto (Moovin)" representam
+// Configuração do editor (Puck): campos e rótulos de cada bloco. O desenho dos blocos está em
+// ./blocos.tsx, compartilhado com o script da loja. Os blocos de "Produto (Moovin)" representam
 // componentes nativos da loja: o template decide onde e como aparecem, a Moovin executa.
 
 type SimNao = "sim" | "nao";
@@ -33,59 +33,6 @@ type ComNome<T> = { [K in keyof T]: T[K] & { nome?: string } };
 
 export type RaizTemplate = { title: string; corPrincipal: string; corDestaque: string };
 
-const produtoDe = (metadata: Record<string, unknown>) => metadata.produto as ProdutoTemplate;
-
-function Vazio({ texto }: { texto: string }) {
-  return <div className="tpl-vazio">{texto}</div>;
-}
-
-const html = (conteudo: string) => ({ __html: DOMPurify.sanitize(conteudo) });
-
-// O template só decide onde e como as abas aparecem; elas vêm do Complemento do produto,
-// quantas forem. Estilos: abas (navegação horizontal), sanfona (abre e fecha) e lista (tudo aberto).
-function Abas({ abas, estilo, numerar }: { abas: Aba[]; estilo: "abas" | "sanfona" | "lista"; numerar: boolean }) {
-  const [ativa, setAtiva] = useState(0);
-  const indice = Math.min(ativa, abas.length - 1);
-  const numero = (i: number) => numerar && <span className="tpl-aba-numero">{String(i + 1).padStart(2, "0")}</span>;
-  if (estilo === "lista") {
-    return (
-      <div className="tpl-abas tpl-abas-lista">
-        {abas.map((aba, i) => (
-          <section key={aba.titulo + i}>
-            <h3 className="tpl-aba-titulo">{numero(i)}{aba.titulo}</h3>
-            <div className="tpl-aba-conteudo" dangerouslySetInnerHTML={html(aba.conteudo)} />
-          </section>
-        ))}
-      </div>
-    );
-  }
-  if (estilo === "sanfona") {
-    return (
-      <div className="tpl-abas tpl-abas-sanfona">
-        {abas.map((aba, i) => (
-          <details key={aba.titulo + i} open={i === 0}>
-            <summary className="tpl-aba-titulo">{numero(i)}{aba.titulo}</summary>
-            <div className="tpl-aba-conteudo" dangerouslySetInnerHTML={html(aba.conteudo)} />
-          </details>
-        ))}
-      </div>
-    );
-  }
-  return (
-    <div className="tpl-abas">
-      <div className="tpl-abas-nav" role="tablist">
-        {abas.map((aba, i) => (
-          <button key={aba.titulo + i} type="button" role="tab" aria-selected={i === indice} onClick={() => setAtiva(i)}>
-            {numero(i)}
-            {aba.titulo}
-          </button>
-        ))}
-      </div>
-      <div className="tpl-abas-painel tpl-aba-conteudo" role="tabpanel" dangerouslySetInnerHTML={html(abas[indice].conteudo)} />
-    </div>
-  );
-}
-
 export const config: Config<ComNome<Blocos>, RaizTemplate> = {
   root: {
     fields: {
@@ -93,10 +40,10 @@ export const config: Config<ComNome<Blocos>, RaizTemplate> = {
       corPrincipal: { type: "text", label: "Cor principal" },
       corDestaque: { type: "text", label: "Cor de destaque" },
     },
-    render: ({ children, corPrincipal, corDestaque }) => (
-      <div className="tpl" style={{ "--tpl-principal": corPrincipal, "--tpl-destaque": corDestaque } as CSSProperties}>
-        {children}
-      </div>
+    render: ({ children, corPrincipal, corDestaque, puck }) => (
+      <B.AmbienteProvider value={{ produto: puck.metadata.produto as ProdutoTemplate, editando: puck.isEditing }}>
+        <B.Raiz corPrincipal={corPrincipal} corDestaque={corDestaque}>{children}</B.Raiz>
+      </B.AmbienteProvider>
     ),
   },
   categories: {
@@ -122,15 +69,9 @@ export const config: Config<ComNome<Blocos>, RaizTemplate> = {
         direita: { type: "slot", label: "Coluna direita" },
       },
       defaultProps: { proporcao: "50/50", esquerda: [], direita: [] },
-      render: ({ proporcao, esquerda: Esquerda, direita: Direita }) => {
-        const [a, b] = proporcao.split("/");
-        return (
-          <div className="tpl-colunas" style={{ gridTemplateColumns: `${a}fr ${b}fr` }}>
-            <Esquerda className="tpl-coluna" />
-            <Direita className="tpl-coluna" />
-          </div>
-        );
-      },
+      render: ({ proporcao, esquerda: Esquerda, direita: Direita }) => (
+        <B.Colunas proporcao={proporcao} esquerda={(c) => <Esquerda className={c} />} direita={(c) => <Direita className={c} />} />
+      ),
     },
     Cartao: {
       label: "Cartão",
@@ -146,20 +87,13 @@ export const config: Config<ComNome<Blocos>, RaizTemplate> = {
         conteudo: { type: "slot", label: "Conteúdo" },
       },
       defaultProps: { fundo: "branco", conteudo: [] },
-      render: ({ fundo, conteudo: Conteudo }) => <Conteudo className={`tpl-cartao tpl-cartao-${fundo}`} />,
+      render: ({ fundo, conteudo: Conteudo }) => <B.Cartao fundo={fundo} conteudo={(c) => <Conteudo className={c} />} />,
     },
     Galeria: {
       label: "Galeria de imagens",
       fields: { sombra: { ...simNao, label: "Sombra na imagem" } },
       defaultProps: { sombra: "sim" },
-      render: ({ sombra, puck }) => {
-        const { moovin } = produtoDe(puck.metadata);
-        return (
-          <div className="tpl-galeria">
-            <img className={sombra === "sim" ? "tpl-sombra" : ""} src={moovin.imagens[0]} alt={moovin.nome} />
-          </div>
-        );
-      },
+      render: ({ sombra }) => <B.Galeria sombra={sombra} />,
     },
     Titulo: {
       label: "Nome do produto",
@@ -169,65 +103,25 @@ export const config: Config<ComNome<Blocos>, RaizTemplate> = {
         mostrarCompartilhar: { ...simNao, label: "Botão compartilhar" },
       },
       defaultProps: { mostrarCodigo: "sim", mostrarAvaliacao: "sim", mostrarCompartilhar: "sim" },
-      render: ({ mostrarCodigo, mostrarAvaliacao, mostrarCompartilhar, puck }) => {
-        const { moovin } = produtoDe(puck.metadata);
-        return (
-          <div className="tpl-titulo">
-            <h1>{moovin.nome}</h1>
-            <div className="tpl-titulo-linha">
-              {mostrarCodigo === "sim" && <span>Cod.: {moovin.codigo}</span>}
-              {mostrarAvaliacao === "sim" && moovin.avaliacao && (
-                <span className="tpl-estrelas">★★★★★ ({moovin.avaliacao.total})</span>
-              )}
-              {mostrarCompartilhar === "sim" && <span className="tpl-compartilhar" aria-label="Compartilhar">↗</span>}
-            </div>
-          </div>
-        );
-      },
+      render: ({ mostrarCodigo, mostrarAvaliacao, mostrarCompartilhar }) => (
+        <B.Titulo mostrarCodigo={mostrarCodigo} mostrarAvaliacao={mostrarAvaliacao} mostrarCompartilhar={mostrarCompartilhar} />
+      ),
     },
     LinhaCompra: {
       label: "Preço, quantidade e comprar",
-      render: ({ puck }) => {
-        const { moovin } = produtoDe(puck.metadata);
-        return (
-          <div className="tpl-compra">
-            <strong>{formatarMoeda(moovin.preco)}</strong>
-            <span className="tpl-quantidade">− 1 +</span>
-            <span className="tpl-comprar">COMPRAR</span>
-          </div>
-        );
-      },
+      render: () => <B.LinhaCompra />,
     },
     BarraCompraFixa: {
       label: "Barra de compra fixa",
-      render: ({ puck }) => {
-        const { moovin } = produtoDe(puck.metadata);
-        return (
-          <div className="tpl-barra-fixa">
-            {puck.isEditing && <small>Aparece ao rolar, quando a área de compra sai da tela</small>}
-            <strong>{formatarMoeda(moovin.preco)}</strong>
-            <span className="tpl-quantidade">− 1 +</span>
-            <span className="tpl-comprar">COMPRAR</span>
-          </div>
-        );
-      },
+      render: () => <B.BarraCompraFixa />,
     },
     Resumo: {
       label: "Resumo do produto",
-      render: ({ puck }) => {
-        const { resumo } = produtoDe(puck.metadata).complemento;
-        if (resumo) return <div className="tpl-resumo" dangerouslySetInnerHTML={html(resumo)} />;
-        return puck.isEditing ? <Vazio texto="Produto sem resumo no complemento" /> : <></>;
-      },
+      render: () => <B.Resumo />,
     },
     PrecoPorUnidade: {
       label: "Preço por kg / L / un",
-      render: ({ puck }) => {
-        const { moovin, complemento } = produtoDe(puck.metadata);
-        const texto = precoPorUnidade(moovin.preco, complemento.conteudoComercial);
-        if (texto) return <p className="tpl-preco-unidade">{texto}</p>;
-        return puck.isEditing ? <Vazio texto="Produto sem conteúdo comercial no complemento" /> : <></>;
-      },
+      render: () => <B.PrecoPorUnidade />,
     },
     AbasDetalhes: {
       label: "Abas de detalhes",
@@ -246,26 +140,13 @@ export const config: Config<ComNome<Blocos>, RaizTemplate> = {
         numerar: { ...simNao, label: "Numerar as abas" },
       },
       defaultProps: { sobretitulo: "CONHEÇA O PRODUTO", titulo: "Informações e detalhes", estilo: "abas", numerar: "sim" },
-      render: ({ sobretitulo, titulo, estilo, numerar, puck }) => {
-        const abas = produtoDe(puck.metadata).complemento.abas.filter((aba) => aba.titulo || aba.conteudo);
-        return (
-          <section className="tpl-detalhes">
-            {sobretitulo && <span className="tpl-sobretitulo">{sobretitulo}</span>}
-            {titulo && <h2>{titulo}</h2>}
-            {abas.length > 0 ? (
-              <Abas abas={abas} estilo={estilo ?? "abas"} numerar={numerar === "sim"} />
-            ) : (
-              puck.isEditing && <Vazio texto="Produto sem abas no complemento" />
-            )}
-          </section>
-        );
-      },
+      render: ({ sobretitulo, titulo, estilo, numerar }) => <B.AbasDetalhes sobretitulo={sobretitulo} titulo={titulo} estilo={estilo} numerar={numerar} />,
     },
     Texto: {
       label: "Texto livre",
       fields: { texto: { type: "textarea", label: "Texto" } },
       defaultProps: { texto: "Escreva aqui" },
-      render: ({ texto }) => <p className="tpl-texto">{texto}</p>,
+      render: ({ texto }) => <B.Texto texto={texto} />,
     },
   },
 };

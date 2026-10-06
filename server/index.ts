@@ -1,3 +1,5 @@
+import { readFile, stat } from "node:fs/promises";
+import { resolve } from "node:path";
 import Fastify from "fastify";
 import cookie from "@fastify/cookie";
 import { conectar, sessoes, templates } from "./banco";
@@ -30,6 +32,28 @@ app.all<{ Params: { servico: string; "*": string } }>("/api/moovin/:servico/*", 
   }
   resposta.code(r.status).header("content-type", r.headers.get("content-type") ?? "application/json");
   return resposta.send(Buffer.from(await r.arrayBuffer()));
+});
+
+// Script da página de produto, público: a Moovin o carrega como script do tipo URL.
+// Leva o template publicado da loja; sem template publicado, entrega um script vazio
+// (a página fica no layout da Moovin). Cache curto: publicar vale em cerca de 1 minuto.
+const ARQUIVO_LOJA = resolve("dist-loja/produto.js");
+let scriptLoja: { codigo: string; versao: number } | null = null;
+async function codigoDaLoja() {
+  const versao = (await stat(ARQUIVO_LOJA)).mtimeMs;
+  if (scriptLoja?.versao !== versao) scriptLoja = { codigo: await readFile(ARQUIVO_LOJA, "utf8"), versao };
+  return scriptLoja.codigo;
+}
+
+app.get<{ Params: { conta: string } }>("/loja/:conta/produto.js", async (pedido, resposta) => {
+  resposta
+    .header("content-type", "application/javascript; charset=utf-8")
+    .header("cache-control", "public, max-age=60")
+    .header("access-control-allow-origin", "*");
+  if (!/^[0-9a-f-]{36}$/i.test(pedido.params.conta)) return resposta.code(404).send("/* loja inválida */");
+  const doc = await templates().findOne({ conta: pedido.params.conta, tipo: "publicado" });
+  if (!doc) return "/* templater: nenhum template publicado */";
+  return `window.__TEMPLATER_BOMGADO__=${JSON.stringify({ template: doc.dados, publicadoEm: doc.atualizadoEm })};\n${await codigoDaLoja()}`;
 });
 
 // Templates da loja: rascunho e publicado.

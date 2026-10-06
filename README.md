@@ -24,6 +24,15 @@ O painel só abre com uma sessão válida da Moovin, como o painel administrativ
 - Os templates (rascunho e publicado) ficam no MongoDB, separados pela loja (`/api/templates/:tipo`).
 - O **Complemento do cadastro fica na descrição do produto, na Moovin**, para a IA de atendimento (Moovin Desk) e os feeds lerem tudo. Convenção (`src/produtos/descricao.ts`): o que vem antes do primeiro Título (h2) é o resumo; a linha "Conteúdo da embalagem: 500 g" alimenta o preço por kg/L/un; cada Título abre uma aba. A tela mostra os campos separados e monta e lê o HTML; descrições no formato antigo (MODO NOVO / @) são lidas e convertidas ao salvar.
 
+## Script da loja (página de produto)
+
+O `Script_Produto` da Moovin passa a ser do tipo **URL**, apontando para `https://<servidor>/loja/<id da loja>/produto.js`. O servidor entrega o template publicado junto com o código (`dist-loja/produto.js`, gerado por `npm run build:loja` a partir de `src/loja/`). Cache de 1 minuto: publicar no Templater vale quase na hora, sem o cache da Moovin.
+
+- **Mesmos blocos do editor:** os blocos (`src/templater/blocos.tsx`) e o CSS (`src/templater/pagina.css`) são os mesmos da prévia, então a página fica igual ao editor.
+- **Elementos nativos:** nunca são movidos. A linha do produto e a seção "Descrição" ficam escondidas, e os botões do template (quantidade, COMPRAR, compartilhar) acionam os nativos. O carrinho continua sendo da Moovin.
+- **Na dúvida, não mexe:** sem template publicado, sem a estrutura esperada da página ou com variação para escolher, a página fica como a Moovin a monta.
+- **Navegação:** acompanha a navegação do Next.js da Moovin (troca de produto sem recarregar).
+
 ## Telas
 
 O painel tem duas áreas, navegadas pelo endereço (`#/produtos` e `#/aparencia`).
