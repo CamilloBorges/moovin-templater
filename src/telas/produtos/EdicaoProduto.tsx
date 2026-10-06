@@ -1,16 +1,15 @@
 import { useEffect, useState } from "react";
-import { Render } from "@puckeditor/core";
 import { ErroApi } from "../../api";
 import { carregarCatalogo, type Catalogo } from "../../produtos/catalogo";
 import type { ProdutoCadastro, Variacao } from "../../produtos/modelo";
 import { carregarProduto, salvarProduto, type Original } from "../../produtos/moovin";
-import { config } from "../../templater/config";
 import { templatePublicado, type TemplateData } from "../../templater/padrao";
 import { formatarMoeda, paraTemplate } from "../../templater/produto";
 import { Alternador, Campo, CampoReferencia, Numero, Secao, Texto } from "./campos";
 import { SecoesComplemento } from "./Complemento";
 import { SecaoImagens } from "./Imagens";
 import { SecaoVariacoes } from "./Variacoes";
+import { PreviaPagina } from "../../componentes/PreviaPagina";
 import { EditorTexto } from "../../componentes/EditorTexto";
 import { descricaoParaIa } from "../../produtos/descricao";
 
@@ -32,22 +31,10 @@ function validar(p: ProdutoCadastro): Record<string, string> {
   return erros;
 }
 
-function PreviaPagina({ produto, fechar }: { produto: ProdutoCadastro; fechar: () => void }) {
+function PreviaProduto({ produto, fechar }: { produto: ProdutoCadastro; fechar: () => void }) {
   const [template, setTemplate] = useState<TemplateData | null>(null);
   useEffect(() => { templatePublicado().then(setTemplate); }, []);
-  return (
-    <div className="previa-fundo" role="dialog" aria-label="Prévia da página do produto">
-      <div className="previa-janela">
-        <header>
-          <strong>Prévia com o template publicado</strong>
-          <button type="button" className="button button-secondary" onClick={fechar}>Fechar</button>
-        </header>
-        <div className="previa-conteudo">
-          {template ? <Render config={config} data={template} metadata={{ produto: paraTemplate(produto) }} /> : <p className="vazio">Carregando o template…</p>}
-        </div>
-      </div>
-    </div>
-  );
+  return <PreviaPagina titulo="Prévia com o template publicado" template={template} produto={paraTemplate(produto)} fechar={fechar} />;
 }
 
 // Carrega o produto da Moovin (com o complemento) e o catálogo de apoio.
@@ -334,7 +321,7 @@ function FormularioProduto({ original, catalogo, avisoInicial, recarregar }: {
 
       </div>
 
-      {previa && <PreviaPagina produto={produto} fechar={() => setPrevia(false)} />}
+      {previa && <PreviaProduto produto={produto} fechar={() => setPrevia(false)} />}
     </>
   );
 }

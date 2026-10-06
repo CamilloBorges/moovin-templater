@@ -14,6 +14,17 @@ npm run dev   # painel (Vite, porta 5173) + servidor (Fastify, porta 3001)
 
 Em desenvolvimento, sem `MONGO_URL`, o servidor sobe um MongoDB local (`mongodb-memory-server`) com os dados em `%LOCALAPPDATA%\moovin-templater\mongo`, fora do OneDrive. Variáveis: `MONGO_URL`, `MONGO_BANCO`, `MOOVIN_API` (padrão `https://api.moovin.app`), `PORTA`, `COOKIE_SEGURO=1` (com HTTPS) e `SESSAO_HORAS`.
 
+## Testes
+
+```bash
+npm test   # Vitest: funções do cadastro, renderizador da loja (jsdom) e rotas do servidor (MongoDB em memória)
+```
+
+- `src/produtos/descricao.test.ts`: migração da descrição antiga e texto para a IA.
+- `src/loja/Pagina.test.tsx`: o renderizador da loja monta o layout padrão e **conhece todo bloco do editor**. Um bloco novo no editor sem o `case` correspondente em `src/loja/Pagina.tsx` quebra o teste.
+- `server/app.test.ts`: rotas do painel e da loja (sessão, Complemento por SKU, templates), com `app.inject`, sem abrir porta. As rotas ficam em `server/app.ts` e a subida do servidor em `server/index.ts`.
+- **CI:** `.github/workflows/testes.yml` roda build e testes a cada push.
+
 ## Acesso: login da Moovin
 
 O painel só abre com uma sessão válida da Moovin, como o painel administrativo dela. Não usa chave de API: o login é o e-mail e a senha do usuário, com a verificação em duas etapas e a escolha da loja, no mesmo fluxo do `id.moovin.app`. Detalhes em `server/moovin.ts`.
@@ -59,6 +70,8 @@ Os campos que o Logus também atualiza (nome, categoria, preço e estoque) têm 
 Os dados ficam no navegador (`src/produtos/repositorio.ts`), começando pelos Cubos de Panela. O modelo (`src/produtos/modelo.ts`) traz, em comentário, o nome de cada campo na API da Moovin, para a etapa de integração.
 
 ### Aparência: Templater (`src/telas/Templater.tsx`)
+
+O editor ocupa a janela inteira, como o editor de temas da Moovin, e o botão **× Fechar** volta ao menu (avisa se houver alterações não salvas). O botão **Visualizar** abre a **prévia em tela cheia**, que usa o mesmo renderizador do script da loja (`src/loja/Pagina.tsx`) dentro de um iframe com a largura do aparelho (desktop, tablet e celular), para o CSS responsivo valer como na loja. A mesma prévia é usada na tela do produto, com o template publicado.
 
 Editor feito com [Puck](https://puckeditor.com/) (`@puckeditor/core`) dentro do visual do painel Moovin, com a interface em português.
 

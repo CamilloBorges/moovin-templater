@@ -6,6 +6,7 @@ import { dicionario } from "../templater/dicionario";
 import { BarraDeAcoes, BotaoModoPrevia, Estrutura } from "../templater/estrutura";
 import { carregarTemplate, salvarTemplate, templatePadrao, type TemplateData } from "../templater/padrao";
 import { formatarMoeda, paraTemplate, type ProdutoTemplate } from "../templater/produto";
+import { PreviaPagina } from "../componentes/PreviaPagina";
 
 const viewports = [
   { width: 1280, label: "Desktop", icon: "Monitor" as const },
@@ -56,7 +57,7 @@ function SeletorProduto({ fechar, escolher }: { fechar?: () => void; escolher: (
   );
 }
 
-export function Templater() {
+export function Templater({ fechar }: { fechar: () => void }) {
   const [inicial, setInicial] = useState<TemplateData | null>(null);
   const [versao, setVersao] = useState(0);
   const [dados, setDados] = useState<TemplateData>(templatePadrao);
@@ -64,6 +65,7 @@ export function Templater() {
   const [produto, setProduto] = useState<{ id: string; nome: string; template: ProdutoTemplate } | null>(null);
   const [seletor, setSeletor] = useState(false);
   const [erro, setErro] = useState("");
+  const [previa, setPrevia] = useState(false);
   // Objetos estáveis: o Puck recalcula o editor quando estas referências mudam.
   const metadata = useMemo(() => ({ produto: produto?.template }), [produto]);
   const overrides = useMemo(() => ({ headerActions: BotaoModoPrevia, outline: Estrutura, actionBar: BarraDeAcoes }), []);
@@ -122,10 +124,16 @@ export function Templater() {
     URL.revokeObjectURL(url);
   }
 
+  function sair() {
+    if (status === "Alterações não salvas" && !window.confirm("Há alterações não salvas no template. Sair mesmo assim?")) return;
+    fechar();
+  }
+
   return (
-    <>
+    <div className="templater-tela">
       <header className="topbar">
         <div className="breadcrumbs">
+          <button type="button" className="botao-fechar-editor" title="Fechar o editor e voltar ao menu" onClick={sair}>× Fechar</button>
           <span>Aparência</span>
           <b>/</b>
           <strong>Templater: página de produto</strong>
@@ -140,6 +148,7 @@ export function Templater() {
           </button>
           <button className="button button-plain" onClick={restaurarPadrao}>Restaurar padrão</button>
           <button className="button button-plain" onClick={exportar}>Exportar JSON</button>
+          <button className="button button-plain" disabled={!produto} onClick={() => setPrevia(true)}>Visualizar</button>
           <button className="button button-secondary" onClick={() => salvar(false)}>Salvar rascunho</button>
           <button className="button button-primary" onClick={() => salvar(true)}>Publicar</button>
         </div>
@@ -168,6 +177,9 @@ export function Templater() {
         )}
       </div>
       {seletor && <SeletorProduto fechar={produto ? () => setSeletor(false) : undefined} escolher={escolherProduto} />}
-    </>
+      {previa && (
+        <PreviaPagina titulo="Prévia do rascunho (como vai ficar na loja)" template={dados} produto={produto?.template ?? null} fechar={() => setPrevia(false)} />
+      )}
+    </div>
   );
 }

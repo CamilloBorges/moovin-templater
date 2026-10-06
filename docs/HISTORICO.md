@@ -154,6 +154,19 @@ Ainda não há backend, API de templates nem renderizador da loja.
 - **Migração:** os produtos são migrados um a um, no primeiro "Salvar na Moovin" pelo painel.
 - **Próximo, em estudo:** um MCP de consulta para a IA do Moovin Desk ler o Complemento, com as instruções do agente explicando como consultá-lo.
 
+## Fase 7 — Tela cheia, prévia e testes automatizados (06/10/2026)
+
+- **Pedidos do Camillo:**
+  - a Aparência ocupa o navegador inteiro, como o editor da Moovin, com "× Fechar" para voltar ao menu;
+  - uma prévia de como a página vai ficar;
+  - a dívida técnica de não ter testes.
+- **Prévia** (`src/componentes/PreviaPagina.tsx`):
+  - usa o renderizador da loja num iframe com a largura do aparelho (desktop 1280, tablet 768 e celular 390);
+  - quantidade e COMPRAR são simulados;
+  - no Templater mostra o rascunho em edição; na tela do produto, o template publicado.
+- **Testes:** Vitest com 29 testes, CI no GitHub Actions e servidor separado em `app.ts`/`index.ts`.
+- **Bug encontrado na hora de testar:** o renderizador da loja não conhecia o bloco "Descrição" criado na fase 6, e a descrição não apareceria na loja. Corrigido, e agora coberto pelo teste "conhece o bloco … do editor".
+
 ## Próximos passos
 
 1. **Implantar (Camillo):** serviço Compose no EasyPanel a partir deste repositório e domínio **`templater.bomgado.net`** pelo túnel da Cloudflare apontando para `app:3001`. **Decisão de 06/10:** sem Cloudflare Access; o painel fica protegido só pelo login da Moovin. O caminho `/loja/*` precisa ficar **público** (sem Cloudflare Access), porque a loja o carrega no navegador do cliente.

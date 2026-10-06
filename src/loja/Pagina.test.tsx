@@ -1,0 +1,65 @@
+// @vitest-environment jsdom
+import { act } from "react";
+import { createRoot } from "react-dom/client";
+import { afterEach, describe, expect, it } from "vitest";
+import { ligacaoSimulada } from "../componentes/PreviaPagina";
+import { config } from "../templater/config";
+import { templatePadrao, type TemplateData } from "../templater/padrao";
+import type { ProdutoTemplate } from "../templater/produto";
+import { Pagina } from "./Pagina";
+
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+globalThis.IntersectionObserver ??= class { observe() {} disconnect() {} unobserve() {} takeRecords() { return []; } root = null; rootMargin = ""; thresholds = []; } as unknown as typeof IntersectionObserver;
+
+const produto: ProdutoTemplate = {
+  moovin: { nome: "Cubos de Panela", codigo: "13925", preco: 39.9, imagens: ["https://exemplo/1.jpg"], avaliacao: null },
+  complemento: {
+    resumo: "<p>Resumo dos cubos.</p>",
+    descricao: "<p>Descrição longa dos cubos.</p>",
+    conteudoComercial: { quantidade: 500, unidade: "g" },
+    abas: [{ titulo: "Preparo", conteudo: "<p>Panela de pressão.</p>" }],
+  },
+};
+
+let raiz: ReturnType<typeof createRoot> | null = null;
+function renderizar(template: TemplateData) {
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  raiz = createRoot(container);
+  act(() => raiz!.render(<Pagina template={template} produto={produto} loja={ligacaoSimulada(produto.moovin.preco)} />));
+  return container;
+}
+afterEach(() => {
+  act(() => raiz?.unmount());
+  document.body.innerHTML = "";
+});
+
+describe("Pagina (renderizador do script da loja)", () => {
+  it("monta o layout padrão com os dados do Moovin e do Complemento", () => {
+    const html = renderizar(templatePadrao).textContent ?? "";
+    for (const texto of ["Cubos de Panela", "Resumo dos cubos.", "Descrição longa dos cubos.", "Preparo", "Panela de pressão."]) {
+      expect(html).toContain(texto);
+    }
+  });
+
+  // Todo bloco do editor precisa existir na loja; senão o bloco some da página publicada.
+  it.each(Object.keys(config.components))("conhece o bloco %s do editor", (tipo) => {
+    const padrao = (config.components as Record<string, { defaultProps?: Record<string, unknown> }>)[tipo].defaultProps ?? {};
+    const template = { root: { props: {} }, content: [{ type: tipo, props: { ...padrao, id: "b1" } }] } as unknown as TemplateData;
+    expect(renderizar(template).querySelector(".tpl")!.childElementCount).toBeGreaterThan(0);
+  });
+});
+
+describe("ligacaoSimulada (quantidade e COMPRAR da prévia)", () => {
+  it("altera a quantidade sem passar de 1 para baixo e avisa quem assina", () => {
+    const loja = ligacaoSimulada(10);
+    let avisos = 0;
+    loja.assinar(() => avisos++);
+    loja.alterarQuantidade(-1);
+    expect(loja.estado().quantidade).toBe("1");
+    loja.alterarQuantidade(1);
+    loja.alterarQuantidade(1);
+    expect(loja.estado().quantidade).toBe("3");
+    expect(avisos).toBe(3);
+  });
+});

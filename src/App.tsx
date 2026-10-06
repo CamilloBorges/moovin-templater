@@ -37,9 +37,10 @@ function App() {
 }
 
 function Painel({ sessao, sair, secao, id }: { sessao: Sessao; sair: () => void; secao: string; id?: string }) {
+  // O editor de aparência ocupa a janela inteira, como o editor de temas da Moovin; "Fechar" volta ao menu.
+  if (secao === "aparencia") return <Templater fechar={() => { location.hash = "#/produtos"; }} />;
   let tela;
-  if (secao === "aparencia") tela = <Templater />;
-  else if (id) tela = <EdicaoProduto key={id} id={id} />;
+  if (id) tela = <EdicaoProduto key={id} id={id} />;
   else tela = <ListaProdutos />;
 
   return (
@@ -51,8 +52,8 @@ function Painel({ sessao, sair, secao, id }: { sessao: Sessao; sair: () => void;
         </div>
         <div className="nav-caption">MENU PRINCIPAL</div>
         <nav className="side-nav">
-          <a className={secao !== "aparencia" ? "nav-active" : ""} href="#/produtos"><span>▧</span> Produtos</a>
-          <a className={secao === "aparencia" ? "nav-active" : ""} href="#/aparencia"><span>◩</span> Aparência</a>
+          <a className="nav-active" href="#/produtos"><span>▧</span> Produtos</a>
+          <a href="#/aparencia"><span>◩</span> Aparência</a>
         </nav>
         <div className="sidebar-conta">
           <strong>{sessao.conta?.nome}</strong>

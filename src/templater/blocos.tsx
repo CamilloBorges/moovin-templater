@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import DOMPurify from "dompurify";
 import { formatarMoeda, precoPorUnidade, type Aba, type ProdutoTemplate } from "./produto";
 
@@ -138,16 +138,17 @@ export function BarraCompraFixa() {
   const { editando, loja } = useAmbiente();
   const compra = useCompra();
   const [visivel, setVisivel] = useState(false);
+  const barra = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!loja) return;
-    const linha = document.querySelector("[data-tpl-compra]");
+    const linha = (barra.current?.ownerDocument ?? document).querySelector("[data-tpl-compra]");
     if (!linha) return;
     const observador = new IntersectionObserver(([e]) => setVisivel(!e.isIntersecting && e.boundingClientRect.top < 0));
     observador.observe(linha);
     return () => observador.disconnect();
   }, [loja]);
   return (
-    <div className={`tpl-barra-fixa${loja ? " tpl-fixa" : ""}${visivel ? " visivel" : ""}`} aria-hidden={loja ? !visivel : undefined}>
+    <div ref={barra} className={`tpl-barra-fixa${loja ? " tpl-fixa" : ""}${visivel ? " visivel" : ""}`} aria-hidden={loja ? !visivel : undefined}>
       {editando && <small>Aparece ao rolar, quando a área de compra sai da tela</small>}
       <strong>{formatarMoeda(compra.preco)}</strong>
       <Quantidade />

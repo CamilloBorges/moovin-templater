@@ -22,6 +22,7 @@ function Bloco({ item }: { item: Item }) {
     case "LinhaCompra": return <B.LinhaCompra />;
     case "BarraCompraFixa": return <B.BarraCompraFixa />;
     case "Resumo": return <B.Resumo />;
+    case "Descricao": return <B.Descricao sobretitulo={p.sobretitulo ?? ""} titulo={p.titulo ?? ""} />;
     case "PrecoPorUnidade": return <B.PrecoPorUnidade />;
     case "AbasDetalhes": return <B.AbasDetalhes sobretitulo={p.sobretitulo ?? ""} titulo={p.titulo ?? ""} estilo={p.estilo} numerar={p.numerar} />;
     case "Texto": return <B.Texto texto={p.texto ?? ""} />;
