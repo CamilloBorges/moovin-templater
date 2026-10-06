@@ -242,6 +242,24 @@ Ainda não há backend, API de templates nem renderizador da loja.
 - **Bug encontrado no teste visual:** `.tpl button { font: inherit; color: inherit }` anulava os estilos do botão. As regras passaram para `.tpl .tpl-comprar`.
 - **Testes:** 82.
 
+## Fase 14 — Abas no estilo Material 3 e testes de responsividade (06/10/2026)
+
+- **Abas:**
+  - variante: clássica (padrão), primária (indicador de 3 px sob o texto), secundária (linha de 2 px sob a aba) ou pílula;
+  - largura: rolável, fixa ou centralizada;
+  - cores: texto ativo, texto inativo, indicador e fundo da barra; linha divisória; maiúsculas;
+  - fonte e tamanho do rótulo, do conteúdo e do título;
+  - painel: fundo, cantos e sombra;
+  - teclado: ← → Home End, com roving tabindex.
+- **Playwright:** 20 aparelhos × 4 cenários, mais interações (126 testes).
+- **Problemas reais encontrados pelos testes e corrigidos:**
+  - áreas de toque pequenas: + e − com 28 px e compartilhar com 32 px, que passaram para 40 px no celular; COMPRAR com mínimo de 44 px;
+  - grade de badges mais larga que o cartão: agora encolhe;
+  - balão de tooltip escondido com `visibility`, que alargava a página: passou para `display: none`;
+  - link longo e tabela larga no conteúdo alargavam a página: agora a palavra quebra e a tabela rola dentro dela;
+  - rótulo de aba mais largo que a tela de 320 px: quebra em até 75% da largura.
+- **Lição do teste:** no Chrome de celular, o `innerWidth` cresce junto com o conteúdo largo. A comparação tem de ser com a largura da tela do aparelho.
+
 ## Próximos passos
 
 1. **Implantar (Camillo):** serviço Compose no EasyPanel a partir deste repositório e domínio **`templater.bomgado.net`** pelo túnel da Cloudflare apontando para `app:3001`. **Decisão de 06/10:** sem Cloudflare Access; o painel fica protegido só pelo login da Moovin. O caminho `/loja/*` precisa ficar **público** (sem Cloudflare Access), porque a loja o carrega no navegador do cliente.

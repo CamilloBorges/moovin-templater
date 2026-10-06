@@ -6,3 +6,5 @@ dist/
 .env.*
 !.env.example
 dist-loja/
+testes/resultados/
+testes/relatorio/

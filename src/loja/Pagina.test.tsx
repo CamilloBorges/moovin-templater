@@ -121,7 +121,7 @@ describe("bloco Badges: limites e ícones", () => {
   it("mostra no máximo badges por linha × linhas", () => {
     const c = montar(varios(10), 3, 2);
     expect(c.querySelectorAll(".tpl-badge")).toHaveLength(6);
-    expect(c.querySelector<HTMLElement>(".tpl-badges")!.style.gridTemplateColumns).toBe("repeat(3, 64px)");
+    expect(c.querySelector<HTMLElement>(".tpl-badges")!.style.gridTemplateColumns).toBe("repeat(3, minmax(0, 64px))"); // encolhe em tela estreita
   });
 
   it("tamanho menor que 64 px em template antigo sobe para 64", () => {
@@ -138,7 +138,8 @@ describe("bloco Badges: limites e ícones", () => {
     const c = montar([{ ...badgeBase, id: "i", nome: "Ícone", tipo: "icone", icone, cor: "#ff0000", corFundo: "#eeeeee" }], 4, 1);
     const el = c.querySelector<HTMLElement>(".tpl-badge-icone")!;
     expect(el.style.color).toBe("rgb(255, 0, 0)");
-    expect(el.style.padding).toBe("12px"); // 18% de 64 px, em px (padding em % esmagava o ícone fora da loja)
+    expect(el.style.padding).toBe("18%"); // na grade da loja: proporcional à célula (fora dela, em px; ver ConteudoBadge)
+    expect(el.style.maxWidth).toBe("64px");
     expect(el.querySelector("svg path")).not.toBeNull();
     expect(el.innerHTML).not.toContain("script");
     expect(el.innerHTML).not.toContain("onload");

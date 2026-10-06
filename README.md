@@ -23,7 +23,33 @@ npm test   # Vitest: funções do cadastro, renderizador da loja (jsdom) e rotas
 - `src/produtos/descricao.test.ts`: migração da descrição antiga e texto para a IA.
 - `src/loja/Pagina.test.tsx`: o renderizador da loja monta o layout padrão e **conhece todo bloco do editor**. Um bloco novo no editor sem o `case` correspondente em `src/loja/Pagina.tsx` quebra o teste.
 - `server/app.test.ts`: rotas do painel e da loja (sessão, Complemento por SKU, templates), com `app.inject`, sem abrir porta. As rotas ficam em `server/app.ts` e a subida do servidor em `server/index.ts`.
-- **CI:** `.github/workflows/testes.yml` roda build e testes a cada push.
+### Responsividade (Playwright)
+
+```bash
+npx playwright install chromium webkit   # primeira vez
+npm run test:responsivo                  # relatório com prints em testes/relatorio
+```
+
+- **Aparelhos** (`playwright.config.ts`):
+  - **iPhones 11 a 17, no WebKit** (o motor do Safari): 11, 11 Pro, 12 Mini, 13, 14 Pro Max, 15, 16 Pro Max e 17;
+  - **Samsung, no Chromium:** Galaxy S8, S9+ (320 px, o mais estreito), S24, Z Flip 7, A55 e Tab S9;
+  - **Computadores:** Chrome em 1024, 1280, 1366, 1440 e 1920 px, e Safari em 1280 px.
+- **Cenários** (`testes/responsivo/cenarios.tsx`):
+  - padrão;
+  - "extremo": nome comprido, preço alto, 10 badges, 8 abas de título longo, fontes grandes, tabela e link sem espaços;
+  - abas em pílula centralizadas;
+  - sanfona.
+- **O que verifica:**
+  - a página não fica mais larga que a tela;
+  - nada sai do cartão;
+  - textos não são cortados;
+  - áreas de toque de pelo menos 40 px no celular;
+  - a última aba abre e aparece;
+  - teclado nas abas;
+  - quantidade e COMPRAR.
+- **Rolagem permitida:** a barra de abas e as tabelas largas rolam dentro de si mesmas, e isso não conta como problema.
+
+- **CI:** `.github/workflows/testes.yml` roda build, Vitest e Playwright a cada push; o relatório com os prints fica como artefato.
 
 ## Acesso: login da Moovin
 

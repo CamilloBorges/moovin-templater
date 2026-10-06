@@ -298,17 +298,20 @@ export function Descricao({ sobretitulo, titulo }: { sobretitulo: string; titulo
 // Imagem ou ícone do badge, no tamanho pedido. O SVG do ícone passa pelo DOMPurify (perfil SVG).
 // O respiro do ícone é em px, proporcional ao tamanho: em %, o padding seria calculado sobre a
 // largura do elemento pai e esmagaria o ícone fora da grade da loja (ex.: na tela do produto).
-export function ConteudoBadge({ badge, tamanho }: { badge: Badge; tamanho: number }) {
+// fluido: na grade da loja o badge encolhe com a célula (até `tamanho`), para caber em tela
+// estreita; aí a célula tem a largura do ícone, e o padding em % fica proporcional a ele.
+export function ConteudoBadge({ badge, tamanho, fluido = false }: { badge: Badge; tamanho: number; fluido?: boolean }) {
+  const medida = fluido ? { width: "100%", maxWidth: tamanho, aspectRatio: "1 / 1" } : { width: tamanho, height: tamanho };
   if (badge.tipo === "icone") {
     return (
       <span
         className={badge.corFundo === "transparent" ? "tpl-badge-icone" : "tpl-badge-icone com-fundo"}
-        style={{ width: tamanho, height: tamanho, padding: Math.round(tamanho * 0.18), color: badge.cor, background: badge.corFundo }}
+        style={{ ...medida, padding: fluido ? "18%" : Math.round(tamanho * 0.18), color: badge.cor, background: badge.corFundo }}
         dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(badge.icone, { USE_PROFILES: { svg: true } }) }}
       />
     );
   }
-  return <img src={badge.imagem} alt="" width={tamanho} height={tamanho} loading="lazy" />;
+  return <img src={badge.imagem} alt="" width={tamanho} height={tamanho} loading="lazy" style={fluido ? { ...medida, height: "auto" } : undefined} />;
 }
 
 // Badges (selos) do produto: em grade, com limite de badges por linha e de linhas (o que passar
@@ -320,9 +323,10 @@ export function Badges({ tamanho, porLinha, maxLinhas }: { tamanho: number; porL
   const visiveis = badges.slice(0, porLinha * maxLinhas);
   return (
     <>
-      <div className="tpl-badges" style={{ gridTemplateColumns: `repeat(${Math.min(porLinha, visiveis.length)}, ${tamanho}px)` }}>
+      {/* Colunas de até `tamanho` px que encolhem juntas quando falta largura (celular). */}
+      <div className="tpl-badges" style={{ gridTemplateColumns: `repeat(${Math.min(porLinha, visiveis.length)}, minmax(0, ${tamanho}px))` }}>
         {visiveis.map((b) => {
-          const conteudo = <ConteudoBadge badge={b} tamanho={tamanho} />;
+          const conteudo = <ConteudoBadge badge={b} tamanho={tamanho} fluido />;
           const balao = b.tooltip && <span className="tpl-badge-balao" role="tooltip">{b.tooltip}</span>;
           return b.link ? (
             <a key={b.id} className="tpl-badge" href={b.link} target="_blank" rel="noopener noreferrer" aria-label={`${b.nome} (abre em outra aba)`}>
@@ -364,8 +368,34 @@ export function PrecoPorUnidade({ unidade: eUnidade, precoKg, alinhamento }: Pro
 type EstiloAbas = "abas" | "sanfona" | "lista";
 
 // As abas vêm da descrição do produto, quantas forem; o template só decide onde e como aparecem.
+// Abas, no espírito das abas do Material 3: variante (clássica, primária, secundária, pílula),
+// largura (rolável, fixa, centralizada), cores, fontes e o painel. Teclado: ← → Home End.
+export type PropsAbas = {
+  sobretitulo: string;
+  titulo: string;
+  estilo?: EstiloAbas;
+  numerar: SimNao;
+  variante?: "classica" | "primaria" | "secundaria" | "pilula";
+  largura?: "rolavel" | "fixa" | "centralizada";
+  corAtiva?: string;
+  corInativa?: string;
+  corIndicador?: string;
+  fundoBarra?: string;
+  divisor?: SimNao;
+  maiusculas?: SimNao;
+  rotulo?: EstiloTexto;
+  conteudo?: EstiloTexto;
+  tituloSecao?: EstiloTexto;
+  painelFundo?: string;
+  painelCantos?: "arredondados" | "retos";
+  painelSombra?: SimNao;
+};
+
+const corValida = (c?: string) => (c && /^#[0-9a-f]{6}$/i.test(c) ? c : undefined);
+
 function Abas({ abas, estilo, numerar }: { abas: Aba[]; estilo: EstiloAbas; numerar: boolean }) {
   const [ativa, setAtiva] = useState(0);
+  const nav = useRef<HTMLDivElement | null>(null);
   const indice = Math.min(ativa, abas.length - 1);
   const numero = (i: number) => numerar && <span className="tpl-aba-numero">{String(i + 1).padStart(2, "0")}</span>;
   if (estilo === "lista") {
@@ -392,13 +422,29 @@ function Abas({ abas, estilo, numerar }: { abas: Aba[]; estilo: EstiloAbas; nume
       </div>
     );
   }
+  // Seleciona a aba, leva o foco a ela e a rola para dentro da barra (celular).
+  const selecionar = (i: number, focar: boolean) => {
+    setAtiva(i);
+    const botao = nav.current?.children[i] as HTMLElement | undefined;
+    if (focar) botao?.focus();
+    botao?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  };
+  const teclado = (e: React.KeyboardEvent, i: number) => {
+    const destino = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: abas.length - 1 }[e.key];
+    if (destino === undefined) return;
+    e.preventDefault();
+    selecionar((destino + abas.length) % abas.length, true);
+  };
   return (
     <div className="tpl-abas">
-      <div className="tpl-abas-nav" role="tablist">
+      <div className="tpl-abas-nav" role="tablist" ref={nav}>
         {abas.map((aba, i) => (
-          <button key={aba.titulo + i} type="button" role="tab" aria-selected={i === indice} onClick={() => setAtiva(i)}>
-            {numero(i)}
-            {aba.titulo}
+          <button key={aba.titulo + i} type="button" role="tab" aria-selected={i === indice} tabIndex={i === indice ? 0 : -1}
+            onClick={() => selecionar(i, false)} onKeyDown={(e) => teclado(e, i)}>
+            <span className="tpl-aba-rotulo">
+              {numero(i)}
+              {aba.titulo}
+            </span>
           </button>
         ))}
       </div>
@@ -407,14 +453,32 @@ function Abas({ abas, estilo, numerar }: { abas: Aba[]; estilo: EstiloAbas; nume
   );
 }
 
-export function AbasDetalhes({ sobretitulo, titulo, estilo, numerar }: { sobretitulo: string; titulo: string; estilo?: EstiloAbas; numerar: SimNao }) {
+export function AbasDetalhes(p: PropsAbas) {
   const abas = useAmbiente().produto.complemento.abas.filter((aba) => aba.titulo || aba.conteudo);
+  const ref = useFontes(p.rotulo?.fonte, p.conteudo?.fonte, p.tituloSecao?.fonte);
   if (!abas.length) return <Vazio texto="Produto sem abas no Complemento" />;
+  const cores: Record<string, string> = {};
+  const cor = (nome: string, valor?: string) => { if (corValida(valor)) cores[nome] = valor!; };
+  cor("--tpl-abas-ativa", p.corAtiva);
+  cor("--tpl-abas-inativa", p.corInativa);
+  cor("--tpl-abas-indicador", p.corIndicador);
+  cor("--tpl-abas-fundo-barra", p.fundoBarra);
+  cor("--tpl-abas-painel", p.painelFundo);
+  const classes = [
+    "tpl-detalhes",
+    `tpl-abas-${p.variante ?? "classica"}`,
+    `tpl-largura-${p.largura ?? "rolavel"}`,
+    p.divisor === "nao" ? "tpl-sem-divisor" : "",
+    p.maiusculas === "sim" ? "tpl-rotulo-maiusculo" : "",
+    p.painelCantos === "retos" ? "tpl-painel-reto" : "",
+    p.painelSombra === "nao" ? "tpl-painel-sem-sombra" : "",
+  ].filter(Boolean);
   return (
-    <section className="tpl-detalhes">
-      {sobretitulo && <span className="tpl-sobretitulo">{sobretitulo}</span>}
-      {titulo && <h2>{titulo}</h2>}
-      <Abas abas={abas} estilo={estilo ?? "abas"} numerar={numerar === "sim"} />
+    <section ref={ref as React.Ref<HTMLElement>} className={classes.join(" ")}
+      style={estilo(cores, varsTexto("tpl-abas-rotulo", p.rotulo), varsTexto("tpl-aba-conteudo", p.conteudo), varsTexto("tpl-detalhes-titulo", p.tituloSecao))}>
+      {p.sobretitulo && <span className="tpl-sobretitulo">{p.sobretitulo}</span>}
+      {p.titulo && <h2>{p.titulo}</h2>}
+      <Abas abas={abas} estilo={p.estilo ?? "abas"} numerar={p.numerar === "sim"} />
     </section>
   );
 }

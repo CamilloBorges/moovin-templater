@@ -27,7 +27,7 @@ type Blocos = {
   Descricao: { sobretitulo: string; titulo: string };
   Badges: { tamanho: number; porLinha: number; maxLinhas: number };
   PrecoPorUnidade: B.PropsPrecoUnidade;
-  AbasDetalhes: { sobretitulo: string; titulo: string; estilo: "abas" | "sanfona" | "lista"; numerar: SimNao };
+  AbasDetalhes: B.PropsAbas;
   Texto: { texto: string };
 };
 
@@ -208,19 +208,56 @@ export const config: Config<ComNome<Blocos>, RaizTemplate> = {
       fields: {
         sobretitulo: { type: "text", label: "Sobretítulo" },
         titulo: { type: "text", label: "Título" },
+        tituloSecao: campoTexto("Estilo do título"),
         estilo: {
           type: "select",
-          label: "Estilo",
+          label: "Formato",
           options: [
             { label: "Abas", value: "abas" },
             { label: "Sanfona (abre e fecha)", value: "sanfona" },
             { label: "Lista (tudo aberto)", value: "lista" },
           ],
         },
+        variante: {
+          type: "select",
+          label: "Variante das abas",
+          options: [
+            { label: "Clássica (padrão Bomgado)", value: "classica" },
+            { label: "Primária (indicador sob o texto)", value: "primaria" },
+            { label: "Secundária (linha sob a aba)", value: "secundaria" },
+            { label: "Pílula (aba ativa preenchida)", value: "pilula" },
+          ],
+        },
+        largura: {
+          type: "radio",
+          label: "Largura das abas",
+          options: [{ label: "Rolável", value: "rolavel" }, { label: "Fixa", value: "fixa" }, { label: "Centralizada", value: "centralizada" }],
+        },
         numerar: { ...simNao, label: "Numerar as abas" },
+        maiusculas: { ...simNao, label: "Rótulo em MAIÚSCULAS" },
+        rotulo: campoTexto("Rótulo das abas"),
+        corAtiva: campoCor("Cor do texto ativo"),
+        corInativa: campoCor("Cor do texto inativo"),
+        corIndicador: campoCor("Cor do indicador"),
+        fundoBarra: campoCor("Fundo da barra de abas"),
+        divisor: { ...simNao, label: "Linha divisória sob as abas" },
+        conteudo: campoTexto("Texto do conteúdo"),
+        painelFundo: campoCor("Fundo do painel"),
+        painelCantos: { type: "radio", label: "Cantos do painel", options: [{ label: "Arredondados", value: "arredondados" }, { label: "Retos", value: "retos" }] },
+        painelSombra: { ...simNao, label: "Borda e sombra do painel" },
       },
-      defaultProps: { sobretitulo: "CONHEÇA O PRODUTO", titulo: "Informações e detalhes", estilo: "abas", numerar: "sim" },
-      render: ({ sobretitulo, titulo, estilo, numerar }) => <B.AbasDetalhes sobretitulo={sobretitulo} titulo={titulo} estilo={estilo} numerar={numerar} />,
+      defaultProps: {
+        sobretitulo: "CONHEÇA O PRODUTO", titulo: "Informações e detalhes", estilo: "abas", numerar: "sim",
+        variante: "classica", largura: "rolavel", maiusculas: "nao", divisor: "sim", painelCantos: "arredondados", painelSombra: "sim",
+        rotulo: {}, conteudo: {}, tituloSecao: {}, corAtiva: "", corInativa: "", corIndicador: "", fundoBarra: "", painelFundo: "",
+      },
+      // Campos só das abas ficam escondidos na sanfona e na lista.
+      resolveFields: (data, { fields }) => {
+        if ((data.props.estilo ?? "abas") === "abas") return fields;
+        const { variante, largura, corIndicador, fundoBarra, divisor, ...resto } = fields;
+        return resto as typeof fields;
+      },
+      render: (props) => <B.AbasDetalhes {...props} />,
     },
     Texto: {
       label: "Texto livre",

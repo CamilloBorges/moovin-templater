@@ -26,7 +26,7 @@ function Bloco({ item }: { item: Item }) {
     case "Badges": return <B.Badges tamanho={Math.max(64, Number(p.tamanho) || 64)} porLinha={Number(p.porLinha) || 4} maxLinhas={Number(p.maxLinhas) || 2} />;
     case "Descricao": return <B.Descricao sobretitulo={p.sobretitulo ?? ""} titulo={p.titulo ?? ""} />;
     case "PrecoPorUnidade": return <B.PrecoPorUnidade {...p} />;
-    case "AbasDetalhes": return <B.AbasDetalhes sobretitulo={p.sobretitulo ?? ""} titulo={p.titulo ?? ""} estilo={p.estilo} numerar={p.numerar} />;
+    case "AbasDetalhes": return <B.AbasDetalhes {...p} sobretitulo={p.sobretitulo ?? ""} titulo={p.titulo ?? ""} numerar={p.numerar} />;
     case "Texto": return <B.Texto texto={p.texto ?? ""} />;
     default: return null; // bloco desconhecido (template mais novo que o script): ignora
   }

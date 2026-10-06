@@ -88,3 +88,24 @@ describe("blocos de compra com estilo", () => {
     expect(el.textContent).toContain("Unidade de 0,700 kg");
   });
 });
+
+describe("Abas de detalhes com estilo", () => {
+  it("aplica variante, largura, cores e fontes por classes e variáveis", () => {
+    const produto: ProdutoTemplate = {
+      moovin: { nome: "X", url: "", codigo: "1", preco: 1, imagens: [], avaliacao: null },
+      complemento: { resumo: "", descricao: "", conteudoComercial: null, abas: [{ titulo: "A", conteudo: "<p>a</p>" }, { titulo: "B", conteudo: "<p>b</p>" }], badges: [] },
+      badges: [],
+    };
+    const c = document.createElement("div");
+    document.body.appendChild(c);
+    const props = { id: "a", sobretitulo: "", titulo: "Detalhes", estilo: "abas", numerar: "nao", variante: "primaria", largura: "fixa", maiusculas: "sim", divisor: "nao",
+      corAtiva: "#111111", corIndicador: "#ff0000", painelCantos: "retos", rotulo: { tamanho: 18 } };
+    act(() => createRoot(c).render(<Pagina template={{ root: { props: {} }, content: [{ type: "AbasDetalhes", props }] } as unknown as TemplateData} produto={produto} loja={ligacaoSimulada(1)} />));
+    const secao = c.querySelector<HTMLElement>(".tpl-detalhes")!;
+    for (const classe of ["tpl-abas-primaria", "tpl-largura-fixa", "tpl-rotulo-maiusculo", "tpl-sem-divisor", "tpl-painel-reto"]) expect(secao.classList).toContain(classe);
+    expect(secao.style.getPropertyValue("--tpl-abas-indicador")).toBe("#ff0000");
+    expect(secao.style.getPropertyValue("--tpl-abas-rotulo-tamanho")).toBe("18px");
+    // só a aba ativa entra na ordem do Tab (roving tabindex)
+    expect([...c.querySelectorAll('[role="tab"]')].map((b) => b.getAttribute("tabindex"))).toEqual(["0", "-1"]);
+  });
+});

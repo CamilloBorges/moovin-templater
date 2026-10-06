@@ -15,3 +15,12 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
+      # Responsividade (Playwright): iPhones no WebKit, Samsung e computadores no Chromium
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npm run test:responsivo
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: relatorio-responsividade
+          path: testes/relatorio
+          retention-days: 14
