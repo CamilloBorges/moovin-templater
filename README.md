@@ -76,6 +76,12 @@ Cadastro de selos da loja: nome, imagem, texto do balão (tooltip, até 300 cara
 - **No produto**, os badges são marcados nos Campos Complementares, na ordem de exibição. O Complemento guarda só os ids.
 - **Na loja**, o bloco "Badges" mostra as imagens com o balão ao passar o mouse (ou ao focar pelo teclado). Badge com link vira um link que abre em outra aba; sem link, não há link. A rota `/loja/<conta>/complemento/<sku>` já devolve os badges resolvidos.
 - Excluir um badge o tira de todos os produtos.
+- **Editor de imagem** (`src/componentes/EditorImagem.tsx`, funções em `src/imagem/processamento.ts`): toda imagem escolhida abre no editor antes de ir para a Moovin, e a imagem atual pode ser reeditada.
+  - **Remover o fundo por cor:** cor do canto ou conta-gotas, com tolerância; por padrão só o fundo ligado às bordas, preservando partes internas da mesma cor.
+  - **Remover o fundo com IA:** usa o rembg (MIT), self-hosted no compose, só na rede interna, com o modelo `isnet-general-use` (Apache 2.0). Rotas `/api/imagem/recursos` e `/api/imagem/remover-fundo`; sem `REMBG_URL`, o botão some.
+  - **Enquadrar:** arrastar, zoom pela roda do mouse ou controle deslizante, margem e aparar as sobras transparentes.
+  - **Redimensionar:** saída PNG quadrada de 64, 128, 256 ou 512 px, com desfazer.
+  - Imagens já salvas na Moovin são baixadas pelo servidor (`/api/imagem/baixar`, só `storage.moovin.store`), porque o canvas não lê pixels de outro domínio.
 
 ### Aparência: Templater (`src/telas/Templater.tsx`)
 

@@ -7,6 +7,8 @@ services:
       MONGO_URL: mongodb://mongo:27017
       MONGO_BANCO: templater
       COOKIE_SEGURO: "1"
+      REMBG_URL: http://rembg:7000
+      REMBG_MODELO: isnet-general-use
     expose:
       - "3001"
     depends_on:
@@ -16,5 +18,20 @@ services:
     restart: unless-stopped
     volumes:
       - mongo-dados:/data/db
+  # Remoção de fundo por IA (rembg, MIT), só na rede interna: o painel chama pelo servidor.
+  # Modelo isnet-general-use (Apache 2.0), baixado no primeiro uso e guardado no volume.
+  # A imagem oficial já traz o bria-rmbg, que é de uso não comercial: não usar.
+  rembg:
+    image: danielgatis/rembg:2.0
+    command: ["s", "--host", "0.0.0.0", "--port", "7000"]
+    restart: unless-stopped
+    environment:
+      U2NET_HOME: /modelos
+    volumes:
+      - rembg-modelos:/modelos
+    mem_limit: 1536m
+    expose:
+      - "7000"
 volumes:
   mongo-dados:
+  rembg-modelos:

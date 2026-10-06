@@ -11,4 +11,7 @@ export const config = {
   // Em produção (HTTPS), o cookie de sessão precisa ser Secure.
   cookieSeguro: process.env.COOKIE_SEGURO === "1",
   sessaoHoras: Number(process.env.SESSAO_HORAS ?? 12),
+  // Remoção de fundo por IA (rembg, self-hosted na rede interna). Em branco, o editor só tem a remoção por cor.
+  rembgUrl: (process.env.REMBG_URL ?? "").replace(/\/$/, ""),
+  rembgModelo: process.env.REMBG_MODELO ?? "isnet-general-use",
 };

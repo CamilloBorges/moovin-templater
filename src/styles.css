@@ -231,3 +231,16 @@ textarea.entrada { height: auto; padding: 8px 10px; resize: vertical; font-famil
 .acoes-linha { white-space: nowrap; text-align: right; }
 .button.perigo { color: #b42318; }
 
+/* Editor de imagem (badges) */
+.editor-imagem { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 360px; gap: 24px; padding: 24px; overflow: auto; background: #f5f6f5; }
+.editor-imagem-area { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.editor-imagem-canvas { border: 1px solid var(--line); border-radius: 8px; cursor: grab; touch-action: none;
+  background-color: #fff; background-image: linear-gradient(45deg, #e3e6e4 25%, transparent 25%), linear-gradient(-45deg, #e3e6e4 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e3e6e4 75%), linear-gradient(-45deg, transparent 75%, #e3e6e4 75%);
+  background-size: 16px 16px; background-position: 0 0, 0 8px, 8px -8px, -8px 0; }
+.editor-imagem-canvas:active { cursor: grabbing; }
+.editor-imagem-canvas.conta-gotas { cursor: crosshair; }
+.editor-imagem-controles { display: flex; flex-direction: column; gap: 14px; }
+.editor-imagem-controles fieldset { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.editor-imagem-controles legend { padding: 0 6px; font: 700 13px Manrope, sans-serif; color: #27332e; }
+.campo-check { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+

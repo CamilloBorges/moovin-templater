@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { enviarImagem, excluirBadge, listarBadges, salvarBadge, type DadosBadge } from "../produtos/badges";
 import type { Badge } from "../templater/produto";
 import { Campo, Secao, Texto } from "./produtos/campos";
+import { EditorImagem } from "../componentes/EditorImagem";
 
 // Cadastro de badges (selos) da loja. A imagem é enviada para a Moovin; o resto fica no nosso servidor.
 // Os badges são associados aos produtos nos Campos Complementares da tela do produto.
@@ -33,16 +34,19 @@ function Formulario({ badge, fechar, salvo }: { badge: Badge | null; fechar: () 
   const [enviando, setEnviando] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
+  const [editor, setEditor] = useState<File | string | null>(null); // imagem aberta no editor
   const alterar = (parcial: Partial<DadosBadge>) => setDados((d) => ({ ...d, ...parcial }));
 
-  async function escolherImagem(arquivo: File | undefined) {
-    if (!arquivo) return;
+  // A imagem escolhida passa pelo editor; o resultado (PNG) é enviado para a Moovin.
+  async function enviarEditada(arquivo: File) {
     setErro("");
     setEnviando(true);
     try {
-      alterar({ imagem: await enviarImagem(dados.nome || arquivo.name, arquivo) });
+      alterar({ imagem: await enviarImagem(dados.nome || "badge", arquivo) });
+      setEditor(null);
     } catch (e) {
       setErro(`Não foi possível enviar a imagem para a Moovin: ${e instanceof Error ? e.message : e}`);
+      setEditor(null);
     } finally {
       setEnviando(false);
     }
@@ -68,9 +72,12 @@ function Formulario({ badge, fechar, salvo }: { badge: Badge | null; fechar: () 
           <Campo rotulo="Nome" obrigatorio>
             <Texto valor={dados.nome} aoMudar={(nome) => alterar({ nome })} placeholder="Ex.: Sem glúten" maxLength={80} />
           </Campo>
-          <Campo rotulo="Imagem" obrigatorio dica="PNG ou SVG com fundo transparente, quadrada. Fica salva na Moovin.">
-            <input type="file" accept="image/*" disabled={enviando} onChange={(e) => escolherImagem(e.target.files?.[0])} />
+          <Campo rotulo="Imagem" obrigatorio dica="Abre no editor (tirar o fundo, enquadrar e redimensionar) e fica salva na Moovin como PNG.">
+            <input type="file" accept="image/*" disabled={enviando} onChange={(e) => { const f = e.target.files?.[0]; if (f) setEditor(f); e.target.value = ""; }} />
           </Campo>
+          {dados.imagem && (
+            <button type="button" className="button button-plain" disabled={enviando} onClick={() => setEditor(dados.imagem)}>Editar a imagem atual</button>
+          )}
           {enviando && <small className="campo-dica">Enviando a imagem para a Moovin…</small>}
           <Campo rotulo="Texto do balão (tooltip)" dica={`${dados.tooltip.length}/300 caracteres. Aparece ao passar o mouse sobre o badge.`}>
             <textarea className="entrada" rows={3} maxLength={300} value={dados.tooltip} onChange={(e) => alterar({ tooltip: e.target.value })} />
@@ -84,6 +91,7 @@ function Formulario({ badge, fechar, salvo }: { badge: Badge | null; fechar: () 
           <Amostra badge={dados} />
         </div>
       </div>
+      {editor && <EditorImagem origem={editor} nome={dados.nome} concluir={enviarEditada} fechar={() => setEditor(null)} />}
       <div className="linha-acoes">
         <span />
         <span className="heading-actions">

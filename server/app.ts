@@ -8,6 +8,7 @@ import { randomUUID } from "node:crypto";
 import { badges, complementos, sessoes, templates, type DocBadge } from "./banco";
 import { repassar } from "./moovin";
 import { exigirSessao, rotasSessao } from "./sessao";
+import { config } from "./config";
 
 // Rotas do servidor do painel: login com a Moovin, repasse das chamadas à API com o token do usuário
 // e, no MongoDB, os templates e o Complemento de cada produto (o que a Moovin não tem).
@@ -91,6 +92,38 @@ export async function criarApp({ log = true } = {}) {
       { upsert: true },
     );
     return { ok: true, atualizadoEm };
+  });
+
+  // Editor de imagem (badges): o que o servidor oferece, remoção de fundo por IA e download das
+  // imagens já salvas na Moovin (o canvas do navegador só edita imagem do próprio domínio).
+  app.get("/api/imagem/recursos", { preHandler: exigirSessao }, async () => ({ removerFundoIa: !!config.rembgUrl }));
+
+  app.post<{ Body: { imagem?: string } }>("/api/imagem/remover-fundo", { preHandler: exigirSessao, bodyLimit: 15 * 1024 * 1024 }, async (pedido, resposta) => {
+    if (!config.rembgUrl) return resposta.code(501).send({ erro: "Remoção de fundo por IA não configurada no servidor." });
+    const m = /^data:(image\/[a-z+.-]+);base64,(.+)$/i.exec(pedido.body?.imagem ?? "");
+    if (!m) return resposta.code(400).send({ erro: "Envie a imagem como data URL." });
+    const formulario = new FormData();
+    formulario.append("file", new Blob([Buffer.from(m[2], "base64")], { type: m[1] }), "imagem");
+    formulario.append("model", config.rembgModelo);
+    let r: Response;
+    try {
+      r = await fetch(`${config.rembgUrl}/api/remove`, { method: "POST", body: formulario, signal: AbortSignal.timeout(120_000) });
+    } catch (erro) {
+      pedido.log.error({ erro }, "rembg indisponível");
+      return resposta.code(502).send({ erro: "O serviço de IA não respondeu. Tente de novo em instantes." });
+    }
+    if (!r.ok) return resposta.code(502).send({ erro: `O serviço de IA recusou a imagem (${r.status}).` });
+    return { imagem: `data:image/png;base64,${Buffer.from(await r.arrayBuffer()).toString("base64")}` };
+  });
+
+  app.get<{ Querystring: { url?: string } }>("/api/imagem/baixar", { preHandler: exigirSessao }, async (pedido, resposta) => {
+    const url = pedido.query.url ?? "";
+    // Só o armazenamento da Moovin: o servidor não busca endereços arbitrários.
+    if (!/^https:\/\/storage\.moovin\.store\//.test(url)) return resposta.code(400).send({ erro: "Endereço não permitido." });
+    const r = await fetch(url, { signal: AbortSignal.timeout(30_000) });
+    const tipo = r.headers.get("content-type") ?? "";
+    if (!r.ok || !tipo.startsWith("image/")) return resposta.code(502).send({ erro: "Não foi possível baixar a imagem." });
+    return resposta.header("content-type", tipo).send(Buffer.from(await r.arrayBuffer()));
   });
 
   // Badges da loja (cadastro no painel).

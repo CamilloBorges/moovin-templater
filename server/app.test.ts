@@ -1,3 +1,4 @@
+import { createServer, type Server } from "node:http";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { FastifyInstance } from "fastify";
@@ -8,8 +9,21 @@ let mongo: MongoMemoryServer;
 let app: FastifyInstance;
 let banco: typeof import("./banco");
 let cookie: string;
+// rembg falso: devolve um PNG fixo e guarda o que recebeu.
+let rembg: Server;
+let rembgRecebeu = "";
 
 beforeAll(async () => {
+  rembg = createServer((req, res) => {
+    let corpo = "";
+    req.on("data", (c) => (corpo += c));
+    req.on("end", () => {
+      rembgRecebeu = `${req.method} ${req.url} ${corpo}`;
+      res.writeHead(200, { "content-type": "image/png" }).end(Buffer.from("PNG-SEM-FUNDO"));
+    });
+  });
+  await new Promise<void>((ok) => rembg.listen(0, "127.0.0.1", ok));
+  process.env.REMBG_URL = `http://127.0.0.1:${(rembg.address() as { port: number }).port}`;
   mongo = await MongoMemoryServer.create();
   process.env.MONGO_URL = mongo.getUri();
   process.env.MONGO_BANCO = "teste";
@@ -34,6 +48,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await app?.close();
   await mongo?.stop();
+  rembg?.close();
 });
 
 describe("rotas sem sessão", () => {
@@ -130,5 +145,31 @@ describe("Badges", () => {
     const painel = (await app.inject({ url: "/api/complementos/p2", headers: { cookie } })).json();
     expect(painel.dados.badges).not.toContain(id);
     expect((await app.inject({ method: "DELETE", url: `/api/badges/${id}`, headers: { cookie } })).statusCode).toBe(404);
+  });
+});
+
+describe("Editor de imagem", () => {
+  it("informa que a remoção de fundo por IA está disponível", async () => {
+    expect((await app.inject({ url: "/api/imagem/recursos", headers: { cookie } })).json()).toEqual({ removerFundoIa: true });
+  });
+
+  it("repassa a imagem ao rembg e devolve o PNG sem fundo", async () => {
+    const imagem = `data:image/png;base64,${Buffer.from("ORIGINAL").toString("base64")}`;
+    const r = await app.inject({ method: "POST", url: "/api/imagem/remover-fundo", headers: { cookie }, payload: { imagem } });
+    expect(r.statusCode).toBe(200);
+    expect(r.json().imagem).toBe(`data:image/png;base64,${Buffer.from("PNG-SEM-FUNDO").toString("base64")}`);
+    expect(rembgRecebeu).toContain("POST /api/remove");
+    expect(rembgRecebeu).toContain("ORIGINAL");
+    expect(rembgRecebeu).toContain("isnet-general-use");
+  });
+
+  it("recusa o que não é imagem em data URL", async () => {
+    const r = await app.inject({ method: "POST", url: "/api/imagem/remover-fundo", headers: { cookie }, payload: { imagem: "https://x/y.png" } });
+    expect(r.statusCode).toBe(400);
+  });
+
+  it("só baixa imagens do armazenamento da Moovin", async () => {
+    const r = await app.inject({ url: "/api/imagem/baixar?url=http://169.254.169.254/latest", headers: { cookie } });
+    expect(r.statusCode).toBe(400);
   });
 });

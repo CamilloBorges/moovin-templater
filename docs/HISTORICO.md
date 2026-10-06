@@ -182,6 +182,20 @@ Ainda não há backend, API de templates nem renderizador da loja.
   - o repasse à Moovin aceita até 15 MB, por causa das imagens em base64.
 - **Testes:** 43.
 
+## Fase 9 — Editor de imagem dos badges (06/10/2026)
+
+- **Pedido do Camillo:** tirar o fundo e redimensionar; IA leve, gratuita e self-hosted, se houver.
+- **Editor no navegador (canvas):**
+  - remoção de fundo por cor, com conta-gotas, tolerância e modo "só bordas";
+  - enquadramento (arrastar, zoom e margem) e aparo das sobras;
+  - saída PNG quadrada (64 a 512 px), com desfazer.
+- **IA:** rembg no compose (`danielgatis/rembg:2.0`), modelo `isnet-general-use` (Apache 2.0).
+  - A imagem oficial traz também o `bria-rmbg`, que é **não comercial**: não usar.
+  - Servidor com 2 CPUs e ~3,9 GB livres: o rembg tem limite de 1,5 GB.
+  - "Editar com IA" por instrução (modelos de difusão) não cabe nesse servidor só com CPU; ficou de fora.
+- Testado no navegador com uma página temporária: remoção por cor, arraste e geração do PNG.
+- **Testes:** 54.
+
 ## Próximos passos
 
 1. **Implantar (Camillo):** serviço Compose no EasyPanel a partir deste repositório e domínio **`templater.bomgado.net`** pelo túnel da Cloudflare apontando para `app:3001`. **Decisão de 06/10:** sem Cloudflare Access; o painel fica protegido só pelo login da Moovin. O caminho `/loja/*` precisa ficar **público** (sem Cloudflare Access), porque a loja o carrega no navegador do cliente.
