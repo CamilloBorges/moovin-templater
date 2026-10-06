@@ -216,6 +216,15 @@ Ainda não há backend, API de templates nem renderizador da loja.
 - **V3 e Templater convivem durante a migração:** o V3 só age com MODO NOVO na descrição, e o Templater só com Complemento.
 - **Testes:** 70.
 
+## Fase 12 — Modelo de IA para logotipos (06/10/2026)
+
+- **Problema:** com o logotipo da Linha Origens, o `isnet-general-use`, feito para fotos, ficou só com a cabeça do boi e apagou o oval.
+- **Teste no servidor:** o `u2net` e a remoção por cor recortaram o logotipo inteiro.
+- **Correção:**
+  - o editor deixa escolher o tipo de imagem, com o `u2net` como padrão e o isnet para fotos;
+  - dica para logotipos com fundo liso: usar a remoção por cor;
+  - o servidor só aceita os modelos da lista, e o `bria-rmbg`, não comercial, fica fora.
+
 ## Próximos passos
 
 1. **Implantar (Camillo):** serviço Compose no EasyPanel a partir deste repositório e domínio **`templater.bomgado.net`** pelo túnel da Cloudflare apontando para `app:3001`. **Decisão de 06/10:** sem Cloudflare Access; o painel fica protegido só pelo login da Moovin. O caminho `/loja/*` precisa ficar **público** (sem Cloudflare Access), porque a loja o carrega no navegador do cliente.

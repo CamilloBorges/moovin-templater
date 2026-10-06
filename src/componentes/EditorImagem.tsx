@@ -56,6 +56,8 @@ export function EditorImagem({ origem, nome, concluir, fechar }: {
   const [erro, setErro] = useState("");
   const [ocupado, setOcupado] = useState("");
   const [iaDisponivel, setIaDisponivel] = useState(false);
+  const [modelos, setModelos] = useState<Array<{ id: string; nome: string }>>([]);
+  const [modelo, setModelo] = useState("");
   const [lado, setLado] = useState(256);
   const [enq, setEnq] = useState<Enquadramento>({ zoom: 1, deslocX: 0, deslocY: 0, margem: 6 });
   const [aparar, setAparar] = useState(true);
@@ -74,7 +76,10 @@ export function EditorImagem({ origem, nome, concluir, fechar }: {
       },
       (e) => setErro(`Não foi possível abrir a imagem: ${e.message}`),
     );
-    api<{ removerFundoIa: boolean }>("imagem/recursos").then((r) => setIaDisponivel(r.removerFundoIa), () => setIaDisponivel(false));
+    api<{ removerFundoIa: boolean; modelos?: Array<{ id: string; nome: string }>; modeloPadrao?: string }>("imagem/recursos").then(
+      (r) => { setIaDisponivel(r.removerFundoIa); setModelos(r.modelos ?? []); setModelo(r.modeloPadrao ?? ""); },
+      () => setIaDisponivel(false),
+    );
   }, [origem]);
 
   // Área usada: a imagem inteira ou só a parte visível (aparar as sobras transparentes).
@@ -121,7 +126,7 @@ export function EditorImagem({ origem, nome, concluir, fechar }: {
     setErro("");
     setOcupado("Removendo o fundo com IA… (pode levar alguns segundos)");
     try {
-      const r = await api<{ imagem: string }>("imagem/remover-fundo", { corpo: { imagem: trabalho.toDataURL("image/png") } });
+      const r = await api<{ imagem: string }>("imagem/remover-fundo", { corpo: { imagem: trabalho.toDataURL("image/png"), modelo } });
       const img = new Image();
       img.src = r.imagem;
       await img.decode();
@@ -215,10 +220,22 @@ export function EditorImagem({ origem, nome, concluir, fechar }: {
         <div className="editor-imagem-controles">
           <fieldset>
             <legend>Remover o fundo</legend>
+            <small className="campo-dica">Logotipo ou selo com fundo liso? A remoção por cor costuma ser a mais fiel.</small>
             {iaDisponivel ? (
-              <button type="button" className="button button-secondary" disabled={!trabalho || !!ocupado} onClick={removerComIa}>
-                ✦ Remover fundo com IA
-              </button>
+              <>
+                {modelos.length > 1 && (
+                  <label className="campo">
+                    <span className="campo-rotulo">Tipo de imagem (modelo da IA)</span>
+                    <select className="entrada" value={modelo} onChange={(e) => setModelo(e.target.value)}>
+                      {modelos.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
+                    </select>
+                  </label>
+                )}
+                <button type="button" className="button button-secondary" disabled={!trabalho || !!ocupado} onClick={removerComIa}>
+                  ✦ Remover fundo com IA
+                </button>
+                <small className="campo-dica">Se a IA cortar parte da imagem, use ↶ Desfazer e tente o outro tipo ou a remoção por cor.</small>
+              </>
             ) : (
               <small className="campo-dica">Remoção por IA não configurada no servidor.</small>
             )}

@@ -80,7 +80,7 @@ Cadastro de selos da loja: nome, imagem, texto do balão (tooltip, até 300 cara
 - **Bloco Badges:** tamanho de 64, 80, 96 ou 128 px, badges por linha (1 a 8) e máximo de linhas (1 a 4). O que passa do limite não aparece, e o editor avisa.
 - **Editor de imagem** (`src/componentes/EditorImagem.tsx`, funções em `src/imagem/processamento.ts`): toda imagem escolhida abre no editor antes de ir para a Moovin, e a imagem atual pode ser reeditada.
   - **Remover o fundo por cor:** cor do canto ou conta-gotas, com tolerância; por padrão só o fundo ligado às bordas, preservando partes internas da mesma cor.
-  - **Remover o fundo com IA:** usa o rembg (MIT), self-hosted no compose, só na rede interna, com o modelo `isnet-general-use` (Apache 2.0). Rotas `/api/imagem/recursos` e `/api/imagem/remover-fundo`; sem `REMBG_URL`, o botão some.
+  - **Remover o fundo com IA:** usa o rembg (MIT), self-hosted no compose, só na rede interna, com escolha do tipo de imagem: `u2net` (padrão, logotipos e selos) ou `isnet-general-use` (fotos de produto, separa o objeto principal). Rotas `/api/imagem/recursos` e `/api/imagem/remover-fundo`; sem `REMBG_URL`, o botão some.
   - **Enquadrar:** arrastar, zoom pela roda do mouse ou controle deslizante, margem e aparar as sobras transparentes.
   - **Redimensionar:** saída PNG quadrada de 64, 128, 256 ou 512 px, com desfazer.
   - Imagens já salvas na Moovin são baixadas pelo servidor (`/api/imagem/baixar`, só `storage.moovin.store`), porque o canvas não lê pixels de outro domínio.

@@ -96,15 +96,20 @@ export async function criarApp({ log = true } = {}) {
 
   // Editor de imagem (badges): o que o servidor oferece, remoção de fundo por IA e download das
   // imagens já salvas na Moovin (o canvas do navegador só edita imagem do próprio domínio).
-  app.get("/api/imagem/recursos", { preHandler: exigirSessao }, async () => ({ removerFundoIa: !!config.rembgUrl }));
+  app.get("/api/imagem/recursos", { preHandler: exigirSessao }, async () => ({
+    removerFundoIa: !!config.rembgUrl,
+    modelos: Object.entries(MODELOS_IA).map(([id, nome]) => ({ id, nome })),
+    modeloPadrao: MODELOS_IA[config.rembgModelo] ? config.rembgModelo : "u2net",
+  }));
 
-  app.post<{ Body: { imagem?: string } }>("/api/imagem/remover-fundo", { preHandler: exigirSessao, bodyLimit: 15 * 1024 * 1024 }, async (pedido, resposta) => {
+  app.post<{ Body: { imagem?: string; modelo?: string } }>("/api/imagem/remover-fundo", { preHandler: exigirSessao, bodyLimit: 15 * 1024 * 1024 }, async (pedido, resposta) => {
     if (!config.rembgUrl) return resposta.code(501).send({ erro: "Remoção de fundo por IA não configurada no servidor." });
     const m = /^data:(image\/[a-z+.-]+);base64,(.+)$/i.exec(pedido.body?.imagem ?? "");
     if (!m) return resposta.code(400).send({ erro: "Envie a imagem como data URL." });
     const formulario = new FormData();
     formulario.append("file", new Blob([Buffer.from(m[2], "base64")], { type: m[1] }), "imagem");
-    formulario.append("model", config.rembgModelo);
+    const modelo = pedido.body?.modelo && MODELOS_IA[pedido.body.modelo] ? pedido.body.modelo : config.rembgModelo;
+    formulario.append("model", modelo);
     let r: Response;
     try {
       r = await fetch(`${config.rembgUrl}/api/remove`, { method: "POST", body: formulario, signal: AbortSignal.timeout(120_000) });
@@ -215,6 +220,15 @@ export async function criarApp({ log = true } = {}) {
   if (existsSync(resolve(PAINEL, "index.html"))) await app.register(fastifyStatic, { root: PAINEL });
   return app;
 }
+
+// Modelos do rembg oferecidos no editor (todos de uso comercial livre; o bria-rmbg, que vem na
+// imagem, é não comercial e fica de fora). Testados com o logotipo da Linha Origens em 06/10/2026:
+// o u2net manteve o logotipo inteiro; o isnet-general-use, feito para fotos, ficou só com o
+// "objeto principal" (a cabeça do boi) e apagou o oval.
+const MODELOS_IA: Record<string, string> = {
+  u2net: "Logotipos, selos e ilustrações",
+  "isnet-general-use": "Fotos de produto (separa o objeto principal)",
+};
 
 // O que sai do badge para o painel e para a loja.
 function publico(b: DocBadge) {

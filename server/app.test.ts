@@ -159,7 +159,9 @@ describe("Badges", () => {
 
 describe("Editor de imagem", () => {
   it("informa que a remoção de fundo por IA está disponível", async () => {
-    expect((await app.inject({ url: "/api/imagem/recursos", headers: { cookie } })).json()).toEqual({ removerFundoIa: true });
+    const r = (await app.inject({ url: "/api/imagem/recursos", headers: { cookie } })).json();
+    expect(r).toMatchObject({ removerFundoIa: true, modeloPadrao: "u2net" });
+    expect(r.modelos.map((m: { id: string }) => m.id)).toEqual(["u2net", "isnet-general-use"]);
   });
 
   it("repassa a imagem ao rembg e devolve o PNG sem fundo", async () => {
@@ -169,7 +171,16 @@ describe("Editor de imagem", () => {
     expect(r.json().imagem).toBe(`data:image/png;base64,${Buffer.from("PNG-SEM-FUNDO").toString("base64")}`);
     expect(rembgRecebeu).toContain("POST /api/remove");
     expect(rembgRecebeu).toContain("ORIGINAL");
+    expect(rembgRecebeu).toContain("u2net"); // padrão
+  });
+
+  it("usa o modelo escolhido, se for um dos oferecidos", async () => {
+    const imagem = `data:image/png;base64,${Buffer.from("X").toString("base64")}`;
+    await app.inject({ method: "POST", url: "/api/imagem/remover-fundo", headers: { cookie }, payload: { imagem, modelo: "isnet-general-use" } });
     expect(rembgRecebeu).toContain("isnet-general-use");
+    await app.inject({ method: "POST", url: "/api/imagem/remover-fundo", headers: { cookie }, payload: { imagem, modelo: "bria-rmbg" } });
+    expect(rembgRecebeu).not.toContain("bria-rmbg"); // fora da lista: volta ao padrão
+    expect(rembgRecebeu).toContain("u2net");
   });
 
   it("recusa o que não é imagem em data URL", async () => {
