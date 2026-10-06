@@ -9,6 +9,8 @@ let mongo: MongoMemoryServer;
 let app: FastifyInstance;
 let banco: typeof import("./banco");
 let cookie: string;
+// Loja falsa: a página /cubos/p carrega o script do Templater.
+let loja: Server;
 // rembg falso: devolve um PNG fixo e guarda o que recebeu.
 let rembg: Server;
 let rembgRecebeu = "";
@@ -24,6 +26,12 @@ beforeAll(async () => {
   });
   await new Promise<void>((ok) => rembg.listen(0, "127.0.0.1", ok));
   process.env.REMBG_URL = `http://127.0.0.1:${(rembg.address() as { port: number }).port}`;
+  loja = createServer((req, res) => {
+    if (req.url === "/cubos/p") res.writeHead(200).end(`<html><script src="https://templater.bomgado.net/loja/${CONTA}/produto.js"></script></html>`);
+    else res.writeHead(404).end("não achou");
+  });
+  await new Promise<void>((ok) => loja.listen(0, "127.0.0.1", ok));
+  process.env.LOJA_URL = `http://127.0.0.1:${(loja.address() as { port: number }).port}`;
   mongo = await MongoMemoryServer.create();
   process.env.MONGO_URL = mongo.getUri();
   process.env.MONGO_BANCO = "teste";
@@ -49,6 +57,7 @@ afterAll(async () => {
   await app?.close();
   await mongo?.stop();
   rembg?.close();
+  loja?.close();
 });
 
 describe("rotas sem sessão", () => {
@@ -192,5 +201,28 @@ describe("Badges com ícone", () => {
 
   it("recusa cor fora do formato", async () => {
     expect((await enviar({ nome: "X", tipo: "icone", icone: svg, cor: "red;background:url(x)" })).statusCode).toBe(400);
+  });
+});
+
+describe("Implantação", () => {
+  it("resume o que já está pronto no Templater", async () => {
+    const r = (await app.inject({ url: "/api/implantacao/resumo", headers: { cookie } })).json();
+    expect(r.produtos).toBeGreaterThan(0);
+    expect(r.publicadoEm).not.toBeNull();
+    expect(r.produtoExemplo).toBeTruthy();
+    expect(r.lojaUrl).toBe(process.env.LOJA_URL);
+  });
+
+  it("verifica se a página da loja carrega o script desta loja", async () => {
+    const r = (await app.inject({ url: "/api/implantacao/pagina?caminho=/cubos/p", headers: { cookie } })).json();
+    expect(r).toMatchObject({ status: 200, carregaTemplater: true, carregaV3: false });
+    const ausente = (await app.inject({ url: "/api/implantacao/pagina?caminho=/outro/p", headers: { cookie } })).json();
+    expect(ausente).toMatchObject({ status: 404, carregaTemplater: false });
+  });
+
+  it("só abre caminhos da própria loja", async () => {
+    for (const caminho of ["https://outro.site/x", "//outro.site/x", "/../etc", "x/p"]) {
+      expect((await app.inject({ url: `/api/implantacao/pagina?caminho=${encodeURIComponent(caminho)}`, headers: { cookie } })).statusCode).toBe(400);
+    }
   });
 });

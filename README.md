@@ -85,6 +85,20 @@ Cadastro de selos da loja: nome, imagem, texto do balão (tooltip, até 300 cara
   - **Redimensionar:** saída PNG quadrada de 64, 128, 256 ou 512 px, com desfazer.
   - Imagens já salvas na Moovin são baixadas pelo servidor (`/api/imagem/baixar`, só `storage.moovin.store`), porque o canvas não lê pixels de outro domínio.
 
+### Implantação (`src/telas/Implantacao.tsx`)
+
+Tutorial de implantação em forma de checklist. Cada passo se verifica sozinho e traz a ação para resolver:
+1. **Templater conectado:** a loja e a URL do script, com botão de copiar.
+2. **Template publicado.**
+3. **Produtos com Complemento:** quantos já foram migrados.
+4. **Script respondendo no Templater:** se já leva o template. Avisa quando o cache do navegador passa de 5 min (a Cloudflare reescrevendo o cabeçalho), com a Cache Rule a criar.
+5. **Script cadastrado na Moovin:** lido pela API (`eco-store/script`). Se faltar, há o botão para **cadastrar automaticamente** (tipo URL, rodapé, defer, na mesma página do script antigo) e o passo a passo manual. Inativo: botão para ativar.
+6. **Script carregando na página da loja:** o servidor abre a página de um produto em `LOJA_URL` (padrão shoptest) e procura o script (`/api/implantacao/pagina`, só caminhos da própria loja).
+7. **Conferência visual:** abrir a página e o que conferir.
+8. **Script antigo (Script_Produto V3):** os dois convivem durante a migração; botão para desativar o antigo quando ela terminar.
+
+As ações que mexem na loja pedem confirmação.
+
 ### Aparência: Templater (`src/telas/Templater.tsx`)
 
 O editor ocupa a janela inteira, como o editor de temas da Moovin, e o botão **× Fechar** volta ao menu (avisa se houver alterações não salvas). O botão **Visualizar** abre a **prévia em tela cheia**, que usa o mesmo renderizador do script da loja (`src/loja/Pagina.tsx`) dentro de um iframe com a largura do aparelho (desktop, tablet e celular), para o CSS responsivo valer como na loja. A mesma prévia é usada na tela do produto, com o template publicado.

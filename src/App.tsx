@@ -5,8 +5,9 @@ import { EdicaoProduto } from "./telas/produtos/EdicaoProduto";
 import { ListaProdutos } from "./telas/produtos/ListaProdutos";
 import { Templater } from "./telas/Templater";
 import { Badges } from "./telas/Badges";
+import { Implantacao } from "./telas/Implantacao";
 
-// Navegação pelo endereço: #/produtos, #/produtos/<id>, #/badges e #/aparencia.
+// Navegação pelo endereço: #/produtos, #/produtos/<id>, #/badges, #/implantacao e #/aparencia.
 function useRota() {
   const [rota, setRota] = useState(location.hash);
   useEffect(() => {
@@ -42,6 +43,7 @@ function Painel({ sessao, sair, secao, id }: { sessao: Sessao; sair: () => void;
   if (secao === "aparencia") return <Templater fechar={() => { location.hash = "#/produtos"; }} />;
   let tela;
   if (secao === "badges") tela = <Badges />;
+  else if (secao === "implantacao") tela = <Implantacao sessao={sessao} />;
   else if (id) tela = <EdicaoProduto key={id} id={id} />;
   else tela = <ListaProdutos />;
 
@@ -54,9 +56,10 @@ function Painel({ sessao, sair, secao, id }: { sessao: Sessao; sair: () => void;
         </div>
         <div className="nav-caption">MENU PRINCIPAL</div>
         <nav className="side-nav">
-          <a className={secao !== "badges" ? "nav-active" : ""} href="#/produtos"><span>▧</span> Produtos</a>
+          <a className={secao !== "badges" && secao !== "implantacao" ? "nav-active" : ""} href="#/produtos"><span>▧</span> Produtos</a>
           <a className={secao === "badges" ? "nav-active" : ""} href="#/badges"><span>◈</span> Badges</a>
           <a href="#/aparencia"><span>◩</span> Aparência</a>
+          <a className={secao === "implantacao" ? "nav-active" : ""} href="#/implantacao"><span>✓</span> Implantação</a>
         </nav>
         <div className="sidebar-conta">
           <strong>{sessao.conta?.nome}</strong>

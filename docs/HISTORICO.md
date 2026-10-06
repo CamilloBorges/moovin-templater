@@ -207,6 +207,15 @@ Ainda não há backend, API de templates nem renderizador da loja.
   - o SVG fica guardado no cadastro e é validado no servidor e sanitizado na loja.
 - Testado no navegador; 63 testes.
 
+## Fase 11 — Tutorial de implantação (06/10/2026)
+
+- **Pedido do Camillo:** um guia das configurações na Moovin para colocar o Templater no ar, verificando se o script já está na página.
+- **Tela "Implantação":** checklist de 8 passos com verificações automáticas.
+  - **Scripts da Moovin:** lidos e cadastrados pela API `eco-store/script`, liberada no repasse.
+  - **Página da loja:** aberta pelo servidor para procurar o script.
+- **V3 e Templater convivem durante a migração:** o V3 só age com MODO NOVO na descrição, e o Templater só com Complemento.
+- **Testes:** 70.
+
 ## Próximos passos
 
 1. **Implantar (Camillo):** serviço Compose no EasyPanel a partir deste repositório e domínio **`templater.bomgado.net`** pelo túnel da Cloudflare apontando para `app:3001`. **Decisão de 06/10:** sem Cloudflare Access; o painel fica protegido só pelo login da Moovin. O caminho `/loja/*` precisa ficar **público** (sem Cloudflare Access), porque a loja o carrega no navegador do cliente.

@@ -14,4 +14,6 @@ export const config = {
   // Remoção de fundo por IA (rembg, self-hosted na rede interna). Em branco, o editor só tem a remoção por cor.
   rembgUrl: (process.env.REMBG_URL ?? "").replace(/\/$/, ""),
   rembgModelo: process.env.REMBG_MODELO ?? "isnet-general-use",
+  // Loja na Moovin (a tela de Implantação abre a página de um produto para ver se o script carrega).
+  lojaUrl: (process.env.LOJA_URL ?? "https://shoptest.bomgado.com").replace(/\/$/, ""),
 };

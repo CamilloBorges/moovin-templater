@@ -22,8 +22,8 @@ export async function criarApp({ log = true } = {}) {
 
   await rotasSessao(app);
 
-  // Serviços da Moovin que o painel pode chamar (cadastro, preço, estoque, catálogo, SEO e arquivos).
-  const SERVICOS = new Set(["oms-product", "oms-pricing", "oms-inventory", "oms-catalog", "eco-seo", "dam-storage"]);
+  // Serviços da Moovin que o painel pode chamar (cadastro, preço, estoque, catálogo, SEO, arquivos e scripts da loja).
+  const SERVICOS = new Set(["oms-product", "oms-pricing", "oms-inventory", "oms-catalog", "eco-seo", "dam-storage", "eco-store"]);
 
   app.all<{ Params: { servico: string; "*": string } }>("/api/moovin/:servico/*", { preHandler: exigirSessao, bodyLimit: 15 * 1024 * 1024 }, async (pedido, resposta) => {
     const { servico } = pedido.params;
@@ -124,6 +124,33 @@ export async function criarApp({ log = true } = {}) {
     const tipo = r.headers.get("content-type") ?? "";
     if (!r.ok || !tipo.startsWith("image/")) return resposta.code(502).send({ erro: "Não foi possível baixar a imagem." });
     return resposta.header("content-type", tipo).send(Buffer.from(await r.arrayBuffer()));
+  });
+
+  // Implantação: o que já está pronto no Templater e se a página da loja carrega o script.
+  app.get("/api/implantacao/resumo", { preHandler: exigirSessao }, async (pedido) => {
+    const conta = pedido.sessao!.conta!.id;
+    const [produtos, totalBadges, publicado, exemplo] = await Promise.all([
+      complementos().countDocuments({ conta }),
+      badges().countDocuments({ conta }),
+      templates().findOne({ conta, tipo: "publicado" }, { projection: { atualizadoEm: 1 } }),
+      complementos().findOne({ conta }, { sort: { atualizadoEm: -1 }, projection: { produtoId: 1 } }),
+    ]);
+    return { produtos, badges: totalBadges, publicadoEm: publicado?.atualizadoEm ?? null, produtoExemplo: exemplo?.produtoId ?? null, lojaUrl: config.lojaUrl };
+  });
+
+  app.get<{ Querystring: { caminho?: string } }>("/api/implantacao/pagina", { preHandler: exigirSessao }, async (pedido, resposta) => {
+    const caminho = pedido.query.caminho ?? "";
+    // Só caminhos da própria loja (ex.: /cubos-de-panela/p): o servidor não abre endereços de fora.
+    if (!/^\/[\w\-./%]*$/.test(caminho) || caminho.includes("//") || caminho.includes("..")) return resposta.code(400).send({ erro: "Caminho inválido." });
+    const url = `${config.lojaUrl}${caminho}`;
+    const scriptTemplater = `/loja/${pedido.sessao!.conta!.id}/produto.js`;
+    try {
+      const r = await fetch(url, { signal: AbortSignal.timeout(20_000), headers: { "user-agent": "TemplaterBomgado/1.0 (verificacao de implantacao)" } });
+      const html = await r.text();
+      return { url, status: r.status, carregaTemplater: html.includes(scriptTemplater), carregaV3: html.includes("bomgado-product") };
+    } catch {
+      return resposta.code(502).send({ erro: `Não foi possível abrir ${url}.` });
+    }
   });
 
   // Badges da loja (cadastro no painel).

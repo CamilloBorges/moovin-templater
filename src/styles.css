@@ -254,3 +254,23 @@ textarea.entrada { height: auto; padding: 8px 10px; resize: vertical; font-famil
 .grade-icones button.marcado { border-color: #117950; background: #eef7f2; box-shadow: 0 0 0 2px #117950 inset; }
 .grade-icones button svg { width: 100%; height: 100%; }
 
+/* Implantação: checklist */
+.implantacao { max-width: 980px; }
+.passo-implantacao { display: grid; grid-template-columns: 34px 1fr; gap: 14px; padding: 18px 20px; border: 1px solid var(--line); border-left-width: 4px; border-radius: 8px; background: #fff; }
+.passo-implantacao.estado-ok { border-left-color: #117950; }
+.passo-implantacao.estado-aviso { border-left-color: #b7791f; }
+.passo-implantacao.estado-erro { border-left-color: #b42318; }
+.passo-implantacao.estado-verificando, .passo-implantacao.estado-aguardando { border-left-color: var(--line); }
+.passo-marca { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; background: #eef1ef; color: #27332e; }
+.passo-implantacao.estado-ok .passo-marca { background: #117950; color: #fff; }
+.passo-corpo { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.passo-corpo h2 { margin: 4px 0 0; font: 700 15px Manrope, sans-serif; color: #27332e; }
+.passo-corpo p { margin: 0; font-size: 13px; line-height: 1.55; }
+.passo-estado { margin-left: 8px; padding: 2px 8px; border-radius: 10px; font: 600 11px Arial, sans-serif; vertical-align: middle; background: #eef1ef; color: var(--muted); }
+.passo-estado.estado-ok { background: #e6f4ec; color: #117950; }
+.passo-estado.estado-aviso { background: #fdf3e2; color: #8a5a12; }
+.passo-estado.estado-erro { background: #fdeceb; color: #b42318; }
+.passo-corpo > .button { align-self: flex-start; }
+.manual summary { cursor: pointer; font-size: 13px; color: #117950; }
+.manual ol, .conferencia { margin: 8px 0 0; padding-left: 20px; font-size: 13px; line-height: 1.7; }
+
