@@ -228,12 +228,14 @@ export function Descricao({ sobretitulo, titulo }: { sobretitulo: string; titulo
 }
 
 // Imagem ou ícone do badge, no tamanho pedido. O SVG do ícone passa pelo DOMPurify (perfil SVG).
+// O respiro do ícone é em px, proporcional ao tamanho: em %, o padding seria calculado sobre a
+// largura do elemento pai e esmagaria o ícone fora da grade da loja (ex.: na tela do produto).
 export function ConteudoBadge({ badge, tamanho }: { badge: Badge; tamanho: number }) {
   if (badge.tipo === "icone") {
     return (
       <span
         className={badge.corFundo === "transparent" ? "tpl-badge-icone" : "tpl-badge-icone com-fundo"}
-        style={{ width: tamanho, height: tamanho, color: badge.cor, background: badge.corFundo }}
+        style={{ width: tamanho, height: tamanho, padding: Math.round(tamanho * 0.18), color: badge.cor, background: badge.corFundo }}
         dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(badge.icone, { USE_PROFILES: { svg: true } }) }}
       />
     );

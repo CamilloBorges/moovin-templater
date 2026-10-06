@@ -138,6 +138,7 @@ describe("bloco Badges: limites e ícones", () => {
     const c = montar([{ ...badgeBase, id: "i", nome: "Ícone", tipo: "icone", icone, cor: "#ff0000", corFundo: "#eeeeee" }], 4, 1);
     const el = c.querySelector<HTMLElement>(".tpl-badge-icone")!;
     expect(el.style.color).toBe("rgb(255, 0, 0)");
+    expect(el.style.padding).toBe("12px"); // 18% de 64 px, em px (padding em % esmagava o ícone fora da loja)
     expect(el.querySelector("svg path")).not.toBeNull();
     expect(el.innerHTML).not.toContain("script");
     expect(el.innerHTML).not.toContain("onload");
