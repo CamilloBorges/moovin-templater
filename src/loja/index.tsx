@@ -68,7 +68,7 @@ function sincronizar(template: TemplateData, agendar: () => void) {
   const ocultos = [nativo.linha, nativo.descricao].filter((el): el is HTMLElement => !!el);
   ocultos.forEach((el) => el.setAttribute(OCULTO, ""));
   const raiz = createRoot(container);
-  raiz.render(<Pagina template={template} produto={produto} loja={criarLigacao(produto.moovin.nome)} />);
+  raiz.render(<Pagina template={template} produto={produto} loja={criarLigacao()} />);
   montagem = { caminho: location.pathname, raiz, container, ocultos };
 }
 

@@ -4,7 +4,7 @@ import { carregarCatalogo, type Catalogo } from "../../produtos/catalogo";
 import type { ProdutoCadastro, Variacao } from "../../produtos/modelo";
 import { carregarProduto, salvarProduto, type Original } from "../../produtos/moovin";
 import { templatePublicado, type TemplateData } from "../../templater/padrao";
-import { formatarMoeda, paraTemplate } from "../../templater/produto";
+import { formatarMoeda, paraTemplate, URL_LOJA as LOJA } from "../../templater/produto";
 import { Alternador, Campo, CampoReferencia, Numero, Secao, Texto } from "./campos";
 import { SecoesComplemento } from "./Complemento";
 import { SecaoImagens } from "./Imagens";
@@ -13,7 +13,6 @@ import { PreviaPagina } from "../../componentes/PreviaPagina";
 import { EditorTexto } from "../../componentes/EditorTexto";
 import { descricaoParaIa } from "../../produtos/descricao";
 
-const LOJA = "https://shoptest.bomgado.com";
 
 function validar(p: ProdutoCadastro): Record<string, string> {
   const erros: Record<string, string> = {};

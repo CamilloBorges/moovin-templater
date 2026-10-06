@@ -6,8 +6,12 @@ import type { ProdutoCadastro } from "../produtos/modelo";
 
 export type UnidadeConteudo = "g" | "kg" | "ml" | "l" | "un";
 
+// Endereço da loja (os produtos ficam em <loja>/<urn>/p).
+export const URL_LOJA = "https://shoptest.bomgado.com";
+
 export type ProdutoMoovin = {
   nome: string;
+  url: string; // endereço da página do produto (o que o botão compartilhar copia)
   codigo: string;
   preco: number;
   imagens: string[];
@@ -58,6 +62,7 @@ export function paraTemplate(produto: ProdutoCadastro): ProdutoTemplate {
   return {
     moovin: {
       nome: produto.nome,
+      url: `${URL_LOJA}/${produto.urn}/p`,
       codigo: variacao?.sku ?? "",
       // Com preço promocional, a loja vende por ele.
       preco: variacao ? variacao.preco.promocional || variacao.preco.venda : 0,

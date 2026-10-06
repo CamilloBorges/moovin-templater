@@ -68,6 +68,7 @@ export function extrairProduto(n: Nativo, complemento: ProdutoTemplate["compleme
   return {
     moovin: {
       nome: texto(cabecalho.querySelector("h1")),
+      url: location.origin + location.pathname,
       codigo: lerCodigo(n),
       preco: lerPreco(n.info.children[1].querySelector("b") ?? n.info.children[1]),
       imagens,
@@ -77,7 +78,7 @@ export function extrairProduto(n: Nativo, complemento: ProdutoTemplate["compleme
   };
 }
 
-export function criarLigacao(nome: string): LigacaoLoja {
+export function criarLigacao(): LigacaoLoja {
   let atual: EstadoCompra = { preco: 0, quantidade: "1", textoComprar: "COMPRAR" };
   const ler = (): EstadoCompra => {
     const n = encontrar();
@@ -107,11 +108,6 @@ export function criarLigacao(nome: string): LigacaoLoja {
     },
     comprar() {
       areaCompra()?.querySelector("button")?.click();
-    },
-    compartilhar() {
-      const url = location.origin + location.pathname;
-      if (navigator.share) navigator.share({ title: nome, url }).catch(() => undefined);
-      else navigator.clipboard?.writeText(url).catch(() => undefined);
     },
   };
 }

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ligacaoSimulada } from "../componentes/PreviaPagina";
 import { config } from "../templater/config";
 import { templatePadrao, type TemplateData } from "../templater/padrao";
@@ -12,7 +12,7 @@ import { Pagina } from "./Pagina";
 globalThis.IntersectionObserver ??= class { observe() {} disconnect() {} unobserve() {} takeRecords() { return []; } root = null; rootMargin = ""; thresholds = []; } as unknown as typeof IntersectionObserver;
 
 const produto: ProdutoTemplate = {
-  moovin: { nome: "Cubos de Panela", codigo: "13925", preco: 39.9, imagens: ["https://exemplo/1.jpg"], avaliacao: null },
+  moovin: { nome: "Cubos de Panela", url: "https://loja.exemplo/cubos/p", codigo: "13925", preco: 39.9, imagens: ["https://exemplo/1.jpg"], avaliacao: null },
   complemento: {
     resumo: "<p>Resumo dos cubos.</p>",
     descricao: "<p>Descrição longa dos cubos.</p>",
@@ -61,5 +61,18 @@ describe("ligacaoSimulada (quantidade e COMPRAR da prévia)", () => {
     loja.alterarQuantidade(1);
     expect(loja.estado().quantidade).toBe("3");
     expect(avisos).toBe(3);
+  });
+});
+
+describe("botão compartilhar", () => {
+  it("no computador copia o link do produto e avisa", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    const container = renderizar(templatePadrao);
+    const botao = container.querySelector<HTMLButtonElement>(".tpl-compartilhar")!;
+    expect(botao.querySelector("svg")).not.toBeNull(); // ícone padrão, não uma seta de texto
+    await act(async () => botao.click());
+    expect(writeText).toHaveBeenCalledWith("https://loja.exemplo/cubos/p");
+    expect(container.textContent).toContain("Link copiado!");
   });
 });

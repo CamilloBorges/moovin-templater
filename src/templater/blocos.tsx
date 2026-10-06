@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import DOMPurify from "dompurify";
 import { formatarMoeda, precoPorUnidade, type Aba, type ProdutoTemplate, textoUnidade } from "./produto";
 
@@ -14,7 +14,6 @@ export type LigacaoLoja = {
   assinar(aoMudar: () => void): () => void;
   alterarQuantidade(delta: 1 | -1): void;
   comprar(): void;
-  compartilhar(): void;
 };
 
 type Ambiente = { produto: ProdutoTemplate; editando: boolean; loja?: LigacaoLoja };
@@ -94,8 +93,62 @@ export function Galeria({ sombra }: { sombra: SimNao }) {
   );
 }
 
+// Copia o link pela área de transferência; sem ela (página fora de HTTPS, permissão negada),
+// pelo método antigo de seleção.
+async function copiar(texto: string, doc: Document) {
+  try {
+    await navigator.clipboard.writeText(texto);
+    return true;
+  } catch {
+    const campo = doc.createElement("textarea");
+    campo.value = texto;
+    campo.style.cssText = "position:fixed;opacity:0";
+    doc.body.appendChild(campo);
+    campo.select();
+    const ok = doc.execCommand("copy");
+    campo.remove();
+    return ok;
+  }
+}
+
+// Ícone padrão de compartilhamento (três pontos ligados).
+function IconeCompartilhar() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="currentColor" d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11A2.99 2.99 0 0 0 21 5a3 3 0 1 0-5.91.7L8.04 9.81A3 3 0 1 0 6 15a2.99 2.99 0 0 0 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65A2.92 2.92 0 1 0 18 16.08Z" />
+    </svg>
+  );
+}
+
+// No celular abre o compartilhamento do aparelho; no computador copia o link, com aviso (como o Script_Produto V3).
+function BotaoCompartilhar({ nome, url }: { nome: string; url: string }) {
+  const [aviso, setAviso] = useState("");
+  async function compartilhar(e: MouseEvent<HTMLButtonElement>) {
+    const toque = window.matchMedia?.("(pointer: coarse)").matches;
+    if (toque && navigator.share) {
+      try {
+        await navigator.share({ title: nome, url });
+        return;
+      } catch (erro) {
+        if ((erro as Error).name === "AbortError") return; // a pessoa fechou o compartilhamento
+      }
+    }
+    const ok = await copiar(url, e.currentTarget.ownerDocument);
+    setAviso(ok ? "Link copiado!" : `Copie o link: ${url}`);
+    setTimeout(() => setAviso(""), 2200);
+  }
+  return (
+    <span className="tpl-compartilhar-area">
+      <button type="button" className="tpl-compartilhar" aria-label={aviso || "Compartilhar produto"} title="Compartilhar" onClick={compartilhar}>
+        <IconeCompartilhar />
+      </button>
+      {aviso && <span className="tpl-compartilhar-aviso" role="status">{aviso}</span>}
+    </span>
+  );
+}
+
 export function Titulo({ mostrarCodigo, mostrarAvaliacao, mostrarCompartilhar }: { mostrarCodigo: SimNao; mostrarAvaliacao: SimNao; mostrarCompartilhar: SimNao }) {
-  const { produto, loja } = useAmbiente();
+  const { produto } = useAmbiente();
   const { moovin } = produto;
   return (
     <div className="tpl-titulo">
@@ -104,7 +157,7 @@ export function Titulo({ mostrarCodigo, mostrarAvaliacao, mostrarCompartilhar }:
         {mostrarCodigo === "sim" && moovin.codigo && <span>Cod.: {moovin.codigo}</span>}
         {mostrarAvaliacao === "sim" && moovin.avaliacao && <span className="tpl-estrelas">★★★★★ ({moovin.avaliacao.total})</span>}
         {mostrarCompartilhar === "sim" && (
-          <button type="button" className="tpl-compartilhar" aria-label="Compartilhar" onClick={() => loja?.compartilhar()}>↗</button>
+          <BotaoCompartilhar nome={moovin.nome} url={moovin.url} />
         )}
       </div>
     </div>

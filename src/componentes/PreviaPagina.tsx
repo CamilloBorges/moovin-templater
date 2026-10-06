@@ -36,7 +36,6 @@ export function ligacaoSimulada(preco: number): LigacaoLoja {
       mudar({ textoComprar: "ADICIONADO (prévia)" });
       setTimeout(() => mudar({ textoComprar: "COMPRAR" }), 1500);
     },
-    compartilhar() {},
   };
 }
 

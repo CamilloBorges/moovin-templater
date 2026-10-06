@@ -11,7 +11,9 @@
 .tpl-titulo h1 { margin: 0 0 8px; font: 700 24px/1.25 Arial, sans-serif; color: var(--tpl-principal); letter-spacing: 0; }
 .tpl-titulo-linha { display: flex; align-items: center; gap: 14px; color: #6b7780; font-size: 13px; }
 .tpl-estrelas { color: #d5a13d; }
-.tpl-compartilhar { margin-left: auto; width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid var(--tpl-borda); border-radius: 50%; }
+.tpl-compartilhar-area { position: relative; margin-left: auto; display: flex; align-items: center; }
+.tpl-compartilhar-aviso { position: absolute; right: calc(100% + 8px); white-space: nowrap; font: 12px Arial, sans-serif; color: var(--tpl-principal); }
+.tpl-compartilhar { color: var(--tpl-principal); cursor: pointer; width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid var(--tpl-borda); border-radius: 50%; }
 .tpl-resumo { margin: 0; color: #675f55; font: italic 16px/1.8 Georgia, "Times New Roman", serif; }
 .tpl-compra, .tpl-barra-fixa { display: flex; align-items: center; gap: 14px; }
 .tpl-compra strong { font-size: 24px; margin-right: auto; }
