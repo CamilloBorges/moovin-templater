@@ -4,7 +4,8 @@ import { carregarCatalogo, type Catalogo } from "../../produtos/catalogo";
 import type { ProdutoCadastro, Variacao } from "../../produtos/modelo";
 import { carregarProduto, salvarProduto, type Original } from "../../produtos/moovin";
 import { templatePublicado, type TemplateData } from "../../templater/padrao";
-import { formatarMoeda, paraTemplate, URL_LOJA as LOJA, type Badge } from "../../templater/produto";
+import { formatarMoeda, paraTemplate, URL_LOJA as LOJA, type Badge, type ModeloCadastro, type TipoAba } from "../../templater/produto";
+import { aplicarModelo, listarModelos, listarTiposAba, modeloPadrao, obrigatoriasVazias, sincronizarTitulos } from "../../produtos/modelos";
 import { listarBadges } from "../../produtos/badges";
 import { Alternador, Campo, CampoReferencia, Numero, Secao, Texto } from "./campos";
 import { SecoesComplemento } from "./Complemento";
@@ -16,7 +17,7 @@ import { EditorTexto } from "../../componentes/EditorTexto";
 import { descricaoParaIa } from "../../produtos/descricao";
 
 
-function validar(p: ProdutoCadastro): Record<string, string> {
+function validar(p: ProdutoCadastro, tipos: TipoAba[]): Record<string, string> {
   const erros: Record<string, string> = {};
   if (!p.nome.trim()) erros.nome = "Informe o nome do produto";
   if (!p.marca) erros.marca = "Informe a marca";
@@ -29,8 +30,14 @@ function validar(p: ProdutoCadastro): Record<string, string> {
     if (v.preco.promocional > 0 && v.preco.promocional >= v.preco.venda)
       erros[`promo-${i}`] = msg("o preço promocional precisa ser menor que o preço do produto");
   });
+  // Abas obrigatórias do cadastro sem conteúdo (Campos Complementares).
+  obrigatoriasVazias(p.complemento.abas, tipos).forEach((titulo, i) => { erros[`aba-${i}`] = `Aba "${titulo}": obrigatória, preencha o conteúdo`; });
   return erros;
 }
+
+// Erros das abas, por posição, para a lista de abas destacar.
+const errosDasAbas = (erros: Record<string, string>) =>
+  new Map(Object.entries(erros).filter(([campo]) => campo.startsWith("aba-")).map(([campo, texto]) => [Number(campo.slice(4)), texto]));
 
 function PreviaProduto({ produto, badges, fechar }: { produto: ProdutoCadastro; badges: Badge[]; fechar: () => void }) {
   const [template, setTemplate] = useState<TemplateData | null>(null);
@@ -59,15 +66,25 @@ function Grupo({ titulo, descricao, aberto, aoAlternar, children }: {
 
 // Carrega o produto da Moovin (com o complemento) e o catálogo de apoio.
 export function EdicaoProduto({ id }: { id: string }) {
-  const [dados, setDados] = useState<{ original: Original; catalogo: Catalogo; badges: Badge[] } | null>(null);
+  const [dados, setDados] = useState<{ original: Original; catalogo: Catalogo; badges: Badge[]; tipos: TipoAba[]; modelos: ModeloCadastro[] } | null>(null);
   const [erro, setErro] = useState("");
   const [carga, setCarga] = useState(0);
   const [mensagem, setMensagem] = useState(""); // resultado do último salvamento, mostrado após reler
   useEffect(() => {
     setErro("");
     setDados(null); // o formulário só monta de novo com o produto relido
-    Promise.all([carregarProduto(id), carregarCatalogo(), listarBadges().catch(() => [] as Badge[])]).then(
-      ([original, catalogo, badges]) => setDados({ original, catalogo, badges }),
+    Promise.all([
+      carregarProduto(id),
+      carregarCatalogo(),
+      listarBadges().catch(() => [] as Badge[]),
+      listarTiposAba().catch(() => [] as TipoAba[]),
+      listarModelos().catch(() => [] as ModeloCadastro[]),
+    ]).then(
+      ([original, catalogo, badges, tipos, modelos]) => {
+        // Abas do cadastro com o título atual (renomeado em Abas e modelos), sem contar como alteração.
+        const complemento = { ...original.cadastro.complemento, abas: sincronizarTitulos(original.cadastro.complemento.abas, tipos) };
+        setDados({ original: { ...original, cadastro: { ...original.cadastro, complemento } }, catalogo, badges, tipos, modelos });
+      },
       (e) => setErro(e instanceof ErroApi && e.status === 404 ? "Produto não encontrado na Moovin." : `Não foi possível carregar o produto: ${e.message}`),
     );
   }, [id, carga]);
@@ -79,22 +96,33 @@ export function EdicaoProduto({ id }: { id: string }) {
       original={dados.original}
       catalogo={dados.catalogo}
       todosBadges={dados.badges}
+      tipos={dados.tipos}
+      modelos={dados.modelos}
       avisoInicial={mensagem}
       recarregar={(texto) => { setMensagem(texto); setCarga((c) => c + 1); }}
     />
   );
 }
 
-function FormularioProduto({ original, catalogo, todosBadges, avisoInicial, recarregar }: {
+function FormularioProduto({ original, catalogo, todosBadges, tipos, modelos, avisoInicial, recarregar }: {
   original: Original;
   catalogo: Catalogo;
   todosBadges: Badge[];
+  tipos: TipoAba[];
+  modelos: ModeloCadastro[];
   avisoInicial: string;
   recarregar: (mensagem: string) => void;
 }) {
   const salvo = original.cadastro;
-  // Produto ainda com o Complemento na descrição da Moovin: já começa com o texto para a IA gerado.
-  const [produto, setProduto] = useState(() => (original.migrar ? { ...salvo, descricao: descricaoParaIa(salvo) } : salvo));
+  // Produto ainda sem Complemento no Templater: já começa com o texto para a IA gerado e com as
+  // abas do modelo padrão (aproveitando as que vieram da descrição da Moovin).
+  const padrao = original.migrar ? modeloPadrao(modelos) : null;
+  const [produto, setProduto] = useState(() => {
+    if (!original.migrar) return salvo;
+    const abas = padrao ? aplicarModelo(salvo.complemento.abas, padrao, tipos) : salvo.complemento.abas;
+    const comModelo = { ...salvo, complemento: { ...salvo.complemento, abas } };
+    return { ...comModelo, descricao: descricaoParaIa(comModelo) };
+  });
   const [mostrarErros, setMostrarErros] = useState(false);
   const [previa, setPrevia] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -109,7 +137,7 @@ function FormularioProduto({ original, catalogo, todosBadges, avisoInicial, reca
   const alterarTodas = (parcial: Partial<Variacao>) => alterar({ variacoes: produto.variacoes.map((v) => ({ ...v, ...parcial })) });
   const alterarUnica = (parcial: Partial<Variacao>) => alterar({ variacoes: produto.variacoes.map((v, i) => (i === 0 ? { ...v, ...parcial } : v)) });
 
-  const erros = validar(produto);
+  const erros = validar(produto, tipos);
   const errosVisiveis = mostrarErros ? erros : {};
   const alterado = original.migrar || JSON.stringify(produto) !== JSON.stringify(salvo);
   const unica = produto.variacoes[0];
@@ -130,7 +158,9 @@ function FormularioProduto({ original, catalogo, todosBadges, avisoInicial, reca
     if (Object.keys(erros).length) {
       setMostrarErros(true);
       setAviso("Corrija os campos destacados antes de salvar.");
-      if (Object.keys(erros).some((campo) => campo !== "nome")) setMoovinAberto(true); // os demais erros são de campos da Moovin
+      // Erros de abas ficam nos Campos Complementares; os outros (fora o nome) são de campos da Moovin.
+      if (Object.keys(erros).some((campo) => campo !== "nome" && !campo.startsWith("aba-"))) setMoovinAberto(true);
+      if (Object.keys(erros).some((campo) => campo.startsWith("aba-"))) setComplementaresAberto(true);
       return;
     }
     setSalvando(true);
@@ -348,6 +378,10 @@ function FormularioProduto({ original, catalogo, todosBadges, avisoInicial, reca
             complemento={produto.complemento}
             preco={precoEfetivo}
             migrar={original.migrar}
+            tipos={tipos}
+            modelos={modelos}
+            errosAbas={errosDasAbas(errosVisiveis)}
+            modeloAplicado={padrao?.nome ?? null}
             aoMudar={(complemento) => alterar({ complemento })}
           />
           <BadgesDoProduto

@@ -7,6 +7,7 @@ import fastifyStatic from "@fastify/static";
 import { randomUUID } from "node:crypto";
 import { badges, complementos, sessoes, templates, type DocBadge } from "./banco";
 import { repassar } from "./moovin";
+import { resolverTitulosAbas, rotasAbas } from "./abas";
 import { exigirSessao, rotasSessao } from "./sessao";
 import { config } from "./config";
 
@@ -21,6 +22,7 @@ export async function criarApp({ log = true } = {}) {
   app.addContentTypeParser("*", { parseAs: "buffer" }, (_pedido, corpo, pronto) => pronto(null, corpo));
 
   await rotasSessao(app);
+  await rotasAbas(app);
 
   // Serviços da Moovin que o painel pode chamar (cadastro, preço, estoque, catálogo, SEO, arquivos e scripts da loja).
   const SERVICOS = new Set(["oms-product", "oms-pricing", "oms-inventory", "oms-catalog", "eco-seo", "dam-storage", "eco-store"]);
@@ -70,7 +72,9 @@ export async function criarApp({ log = true } = {}) {
     const ids = ((doc.dados as { badges?: unknown }).badges ?? []) as string[];
     const lista = ids.length ? await badges().find({ conta: pedido.params.conta, _id: { $in: ids } }).toArray() : [];
     const porId = new Map(lista.map((b) => [b._id, publico(b)]));
-    return { complemento: doc.dados, badges: ids.map((id) => porId.get(id)).filter(Boolean) };
+    // Abas do cadastro com o título atual do cadastro.
+    const complemento = await resolverTitulosAbas(pedido.params.conta, doc.dados);
+    return { complemento, badges: ids.map((id) => porId.get(id)).filter(Boolean) };
   });
 
   // Complemento do produto no painel (por id do produto na Moovin).

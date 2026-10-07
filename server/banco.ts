@@ -36,6 +36,22 @@ export type DocBadge = {
   atualizadoPor: string;
 };
 
+// Abas do cadastro (título, conteúdo modelo, obrigatória e instrução). As abas do produto apontam
+// para cá pelo campo tipo; a loja recebe o título daqui, então renomear vale para todos os produtos.
+export type DocTipoAba = {
+  _id: string;
+  conta: string;
+  titulo: string;
+  conteudoModelo: string;
+  obrigatoria: boolean;
+  instrucao: string;
+  atualizadoEm: Date;
+  atualizadoPor: string;
+};
+
+// Modelos de cadastro: a sequência de abas (ids de DocTipoAba) de um tipo de produto. Um é o padrão.
+export type DocModelo = { _id: string; conta: string; nome: string; padrao: boolean; abas: string[]; criadoEm: Date; atualizadoEm: Date; atualizadoPor: string };
+
 // O que a Moovin não tem, por produto: a descrição da página e os dados adicionais (resumo,
 // conteúdo comercial, abas e badges). Os campos padrão (preço, categoria, estoque…) ficam só na Moovin,
 // e a descrição da Moovin guarda o texto para a IA de atendimento. A loja acha o produto pelo SKU.
@@ -61,9 +77,13 @@ export async function conectar() {
   await templates().createIndex({ conta: 1, tipo: 1 }, { unique: true });
   await complementos().createIndex({ conta: 1, skus: 1 });
   await badges().createIndex({ conta: 1 });
+  await tiposAba().createIndex({ conta: 1 });
+  await modelos().createIndex({ conta: 1 });
 }
 
 export const sessoes = (): Collection<Sessao> => db.collection<Sessao>("sessoes");
 export const templates = (): Collection<DocTemplate> => db.collection<DocTemplate>("templates");
 export const complementos = (): Collection<DocComplemento> => db.collection<DocComplemento>("complementos");
 export const badges = (): Collection<DocBadge> => db.collection<DocBadge>("badges");
+export const tiposAba = (): Collection<DocTipoAba> => db.collection<DocTipoAba>("tiposAba");
+export const modelos = (): Collection<DocModelo> => db.collection<DocModelo>("modelos");
