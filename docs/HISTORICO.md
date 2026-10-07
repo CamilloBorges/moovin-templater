@@ -294,6 +294,29 @@ Ainda não há backend, API de templates nem renderizador da loja.
 - **Como é feito:** `estiloGaleria` gera variáveis CSS (`aspect-ratio` e `object-fit`). A loja e a prévia usam o mesmo bloco.
 - **Testes:** 3 novos (86 no total). Visual conferido no navegador com fotos de proporções diferentes.
 
+## Fase 17 — Mapa de Cortes (07/10/2026)
+
+- **Pedido do Camillo:**
+  - um cadastro com a imagem de um animal, com a origem de cada corte marcada e numerada, o nome e as informações do corte;
+  - no produto, ativar o Mapa de Corte e escolher o corte;
+  - a página monta uma imagem como a do Ossobuco do Armazém (nome do produto em cima, o animal com a região destacada e a descrição embaixo) e a coloca no fim da galeria.
+- **Decisões (07/10):**
+  - marcação por **contorno da região** (polígono) com o número no centro;
+  - a imagem é **montada na página** (vetor), não gerada nem salva na Moovin: muda o cadastro, mudam todas as páginas. Não aparece em vitrines nem em feeds;
+  - **vários mapas** (um por animal);
+  - descrição do corte com **ajuste opcional no produto**.
+- **Tela "Mapas de cortes"** (`#/mapas`):
+  - imagem do animal enviada para a Moovin (`templater/mapas`), com a largura e a altura reais guardadas;
+  - lista de cortes com número, nome, descrição (até 400 caracteres, vai na imagem) e informações detalhadas (HTML);
+  - desenho do contorno por cliques (mínimo de 3 pontos), com "Desfazer ponto" e "Desenhar de novo"; os pontos podem ser arrastados para ajustar;
+  - pontos em fração da imagem (0 a 1), então trocar a imagem por outra do mesmo enquadramento não perde os contornos.
+- **Produto (Campos Complementares):** a seção "Mapa de Corte" tem o liga/desliga, o animal, o corte (os que não têm contorno ficam indisponíveis), a descrição opcional e a prévia. Ativado sem corte, não salva.
+- **Loja:** a rota pública do Complemento devolve o `mapaCorte` resolvido. O bloco Galeria mostra o mapa como último item e última miniatura, no formato da galeria (no original, 4:5).
+- **Aparência (bloco Galeria → Mapa de Corte):** mostrar ou não, fundo, logotipo, fonte e cor do nome do produto, cor da região e fonte e cor da descrição.
+- **Excluir:** um mapa desliga o Mapa de Corte dos produtos que o usavam; um corte, ou um corte sem contorno, faz o produto não mostrar a imagem.
+- **Recomendação:** imagem do animal em **PNG com fundo transparente**, sem textos. Com fundo chapado, aparece um retângulo diferente do fundo do card.
+- **Testes:** 103 (9 novos: geometria, resolução, rotas e galeria na loja). Visual conferido com o Playwright (a extensão do Chrome caiu): cadastro, desenho com cliques reais, arraste de ponto, produto e prévia.
+
 ## Próximos passos
 
 1. **Implantar (Camillo):** serviço Compose no EasyPanel a partir deste repositório e domínio **`templater.bomgado.net`** pelo túnel da Cloudflare apontando para `app:3001`. **Decisão de 06/10:** sem Cloudflare Access; o painel fica protegido só pelo login da Moovin. O caminho `/loja/*` precisa ficar **público** (sem Cloudflare Access), porque a loja o carrega no navegador do cliente.

@@ -26,7 +26,60 @@ export type ComplementoProduto = {
   badges: string[]; // ids dos badges do produto, na ordem de exibição (cadastro em Badges)
   // Abas do produto, quantas forem necessárias. O template decide onde e como aparecem.
   abas: Aba[];
+  // Mapa de Corte: de que mapa e de que corte é o produto (cadastro em Mapas de cortes).
+  // Sem o campo (produtos antigos) ou null: o produto não mostra o mapa.
+  mapaCorte?: MapaCorteProduto | null;
 };
+
+export type MapaCorteProduto = {
+  mapa: string; // id do mapa (animal)
+  corte: string; // id do corte dentro do mapa
+  descricao: string; // texto na imagem; vazio = a descrição cadastrada no corte
+};
+
+// Ponto da região do corte, em fração da imagem (0 a 1): independe do tamanho da imagem.
+export type Ponto = [number, number];
+
+export type Corte = {
+  id: string;
+  numero: number; // numeração no mapa (como no pôster de cortes)
+  nome: string;
+  descricao: string; // texto curto, que vai na imagem do produto
+  detalhes: string; // HTML: informações detalhadas do corte
+  regiao: Ponto[]; // contorno da região (polígono); vazio = ainda não desenhado
+};
+
+// Mapa de cortes de um animal: a imagem (salva na Moovin) e os cortes marcados nela.
+export type MapaCortes = { id: string; nome: string; imagem: string; largura: number; altura: number; cortes: Corte[] };
+
+// O que a página precisa para desenhar a imagem do Mapa de Corte do produto.
+export type MapaCorteResolvido = {
+  imagem: string;
+  largura: number;
+  altura: number;
+  regiao: Ponto[];
+  numero: number;
+  corte: string; // nome do corte
+  descricao: string;
+};
+
+// Mapa de Corte do produto a partir do cadastro: null se o produto não usa, ou se o mapa, o corte
+// ou a região não existem mais (a imagem não aparece em vez de aparecer quebrada).
+export function resolverMapaCorte(ref: MapaCorteProduto | null | undefined, mapas: MapaCortes[]): MapaCorteResolvido | null {
+  if (!ref) return null;
+  const mapa = mapas.find((m) => m.id === ref.mapa);
+  const corte = mapa?.cortes.find((c) => c.id === ref.corte);
+  if (!mapa || !corte || corte.regiao.length < 3 || !mapa.imagem) return null;
+  return {
+    imagem: mapa.imagem,
+    largura: mapa.largura,
+    altura: mapa.altura,
+    regiao: corte.regiao,
+    numero: corte.numero,
+    corte: corte.nome,
+    descricao: ref.descricao.trim() || corte.descricao,
+  };
+}
 
 // Aba do produto. Com `tipo`, ela é uma aba do cadastro (Abas e modelos): o título vem de lá
 // (renomear no cadastro renomeia em todos os produtos) e o conteúdo é do produto. Sem `tipo`,
@@ -63,6 +116,7 @@ export type ProdutoTemplate = {
   moovin: ProdutoMoovin;
   complemento: ComplementoProduto;
   badges: Badge[]; // os badges do produto, já com os dados do cadastro
+  mapaCorte?: MapaCorteResolvido | null; // imagem do Mapa de Corte, no fim da galeria
 };
 
 export function formatarMoeda(valor: number) {
@@ -93,7 +147,7 @@ export function resolverBadges(ids: string[], todos: Badge[]): Badge[] {
   return ids.map((id) => todos.find((b) => b.id === id)).filter((b): b is Badge => !!b);
 }
 
-export function paraTemplate(produto: ProdutoCadastro, todosBadges: Badge[] = []): ProdutoTemplate {
+export function paraTemplate(produto: ProdutoCadastro, todosBadges: Badge[] = [], mapas: MapaCortes[] = []): ProdutoTemplate {
   const variacao = produto.variacoes[0];
   return {
     moovin: {
@@ -107,5 +161,6 @@ export function paraTemplate(produto: ProdutoCadastro, todosBadges: Badge[] = []
     },
     complemento: produto.complemento,
     badges: resolverBadges(produto.complemento.badges, todosBadges),
+    mapaCorte: resolverMapaCorte(produto.complemento.mapaCorte, mapas),
   };
 }

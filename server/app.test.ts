@@ -97,7 +97,7 @@ describe("Complemento do produto", () => {
 
     const loja = await app.inject({ url: `/loja/${CONTA}/complemento/13926` });
     expect(loja.statusCode).toBe(200);
-    expect(loja.json()).toEqual({ complemento, badges: [] });
+    expect(loja.json()).toEqual({ complemento, badges: [], mapaCorte: null });
   });
 
   it("não vaza o Complemento de outra loja", async () => {
@@ -280,5 +280,48 @@ describe("Abas e modelos de cadastro", () => {
     expect(painel.dados.abas[0]).toEqual({ titulo: "Como conservar", conteudo: "<p>0 a 4 °C</p>" });
     const [carnes] = await listar("modelos");
     expect(carnes.abas).not.toContain(conservacao.id);
+  });
+});
+
+describe("Mapas de cortes", () => {
+  const enviar = (metodo: "POST" | "PUT" | "DELETE", url: string, payload?: object) =>
+    app.inject({ method: metodo, url: `/api/${url}`, headers: { cookie }, ...(payload ? { payload } : {}) });
+  const regiao = [[0.1, 0.5], [0.2, 0.5], [0.2, 0.6]];
+  const bovino = {
+    nome: "Bovino", imagem: "https://storage.moovin.store/main/x/bovino.png", largura: 1000, altura: 600,
+    cortes: [
+      { numero: 29, nome: "Ossobuco", descricao: "Corte da perna, em rodelas com o osso no centro.", detalhes: "<p>Ideal para ensopados.</p>", regiao },
+      { numero: 12, nome: "Acém", descricao: "Dianteiro.", detalhes: "", regiao: [] },
+    ],
+  };
+
+  it("valida o mapa: imagem, número, contorno com pelo menos 3 pontos e coordenadas entre 0 e 1", async () => {
+    expect((await enviar("POST", "mapas", { ...bovino, imagem: "" })).json().erro).toMatch(/imagem/);
+    expect((await enviar("POST", "mapas", { ...bovino, cortes: [{ ...bovino.cortes[0], numero: -1 }] })).statusCode).toBe(400);
+    expect((await enviar("POST", "mapas", { ...bovino, cortes: [{ ...bovino.cortes[0], regiao: [[0, 0], [1, 1]] }] })).json().erro).toMatch(/3 pontos/);
+    expect((await enviar("POST", "mapas", { ...bovino, cortes: [{ ...bovino.cortes[0], regiao: [[0, 0], [1, 1], [1.5, 0]] }] })).statusCode).toBe(400);
+  });
+
+  it("a loja recebe o Mapa de Corte resolvido, com a descrição do produto ou a do corte", async () => {
+    const mapa = (await enviar("POST", "mapas", bovino)).json();
+    expect(mapa.cortes.map((c: { id: string }) => typeof c.id)).toEqual(["string", "string"]);
+    const [ossobuco, acem] = mapa.cortes;
+    const base = { resumo: "", descricao: "", conteudoComercial: null, abas: [], badges: [] };
+
+    await enviar("PUT", "complementos/p-mapa", { dados: { ...base, mapaCorte: { mapa: mapa.id, corte: ossobuco.id, descricao: "" } }, skus: ["OSSO"] });
+    const loja = (await app.inject({ url: `/loja/${CONTA}/complemento/OSSO` })).json();
+    expect(loja.mapaCorte).toEqual({ imagem: bovino.imagem, largura: 1000, altura: 600, regiao, numero: 29, corte: "Ossobuco", descricao: bovino.cortes[0].descricao });
+
+    await enviar("PUT", "complementos/p-mapa", { dados: { ...base, mapaCorte: { mapa: mapa.id, corte: ossobuco.id, descricao: "Ossobuco do Armazém." } }, skus: ["OSSO"] });
+    expect((await app.inject({ url: `/loja/${CONTA}/complemento/OSSO` })).json().mapaCorte.descricao).toBe("Ossobuco do Armazém.");
+
+    // Corte sem contorno desenhado: sem imagem.
+    await enviar("PUT", "complementos/p-mapa", { dados: { ...base, mapaCorte: { mapa: mapa.id, corte: acem.id, descricao: "" } }, skus: ["OSSO"] });
+    expect((await app.inject({ url: `/loja/${CONTA}/complemento/OSSO` })).json().mapaCorte).toBeNull();
+
+    // Excluir o mapa desliga o Mapa de Corte do produto.
+    await enviar("PUT", "complementos/p-mapa", { dados: { ...base, mapaCorte: { mapa: mapa.id, corte: ossobuco.id, descricao: "" } }, skus: ["OSSO"] });
+    expect((await enviar("DELETE", `mapas/${mapa.id}`)).statusCode).toBe(200);
+    expect((await app.inject({ url: "/api/complementos/p-mapa", headers: { cookie } })).json().dados.mapaCorte).toBeNull();
   });
 });
