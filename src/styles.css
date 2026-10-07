@@ -131,6 +131,19 @@ textarea.entrada { height: auto; padding: 8px 10px; resize: vertical; font-famil
 .item-aba { display: flex; flex-direction: column; gap: 6px; padding: 10px; background: #f8faf9; border-radius: 6px; }
 .item-aba-topo { display: flex; gap: 6px; align-items: center; }
 .item-aba-numero { color: #a27b3b; font-weight: 700; font-size: 12px; width: 22px; }
+/* Abas do cadastro e modelos */
+.aba-complemento.com-erro { border-color: #e2a39b; }
+.item-modelo { padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; }
+.item-modelo-titulo { flex: 1; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #27332e; min-height: 32px; }
+.selo-obrigatoria, .selo-cadastro, .selo-padrao { margin-left: 6px; padding: 1px 6px; border-radius: 10px; font-size: 9px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase; }
+.selo-obrigatoria { background: #fdecea; color: #a23b30; }
+.selo-cadastro { background: #eef2fb; color: #4b5f8a; }
+.selo-padrao { background: var(--green-pale); color: #117950; }
+.ficha-fixa { padding-right: 10px; }
+.seletor-adicionar { align-self: flex-start; width: auto; min-width: 260px; }
+.aplicar-modelo { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 12px; border-radius: 8px; background: #f7f5f0; }
+.aplicar-modelo select { width: auto; min-width: 200px; }
+.aplicar-modelo small { flex-basis: 100%; }
 .zona-perigo { display: flex; align-items: center; gap: 10px; justify-content: flex-end; font-size: 13px; color: #a03a2f; }
 .busca { max-width: 360px !important; margin-left: 0 !important; }
 .tabela-produtos { border-collapse: collapse; background: #fff; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; }

@@ -28,7 +28,22 @@ export type ComplementoProduto = {
   abas: Aba[];
 };
 
-export type Aba = { titulo: string; conteudo: string }; // conteúdo em HTML
+// Aba do produto. Com `tipo`, ela é uma aba do cadastro (Abas e modelos): o título vem de lá
+// (renomear no cadastro renomeia em todos os produtos) e o conteúdo é do produto. Sem `tipo`,
+// é uma aba avulsa, só daquele produto.
+export type Aba = { titulo: string; conteudo: string; tipo?: string }; // conteúdo em HTML
+
+// Aba do cadastro: o que vem preenchido no produto novo e as regras de preenchimento.
+export type TipoAba = {
+  id: string;
+  titulo: string;
+  conteudoModelo: string; // HTML que já vem no produto quando a aba entra por um modelo
+  obrigatoria: boolean; // o produto não salva com o conteúdo vazio
+  instrucao: string; // dica para quem cadastra (não vai para a loja)
+};
+
+// Modelo de cadastro: a sequência de abas de um tipo de produto. Um deles é o padrão.
+export type ModeloCadastro = { id: string; nome: string; padrao: boolean; abas: string[] }; // abas: ids de TipoAba, na ordem
 
 // Badge (selo) cadastrado no painel: uma imagem (salva na Moovin) ou um ícone (SVG guardado no
 // cadastro, com cor e fundo). O link, se houver, abre em outra aba.
