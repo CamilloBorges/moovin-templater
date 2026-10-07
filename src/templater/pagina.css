@@ -7,7 +7,10 @@
 .tpl-cartao { display: flex; flex-direction: column; gap: 14px; padding: 24px; border-radius: 20px; }
 .tpl-cartao-sombra { border: 1px solid var(--tpl-borda); box-shadow: var(--tpl-sombra); }
 .tpl-cantos-retos { border-radius: 0 !important; }
-.tpl-galeria img { width: 100%; display: block; border-radius: 18px; }
+/* Galeria: formato, encaixe, cantos e largura vêm do template por variáveis CSS (estiloGaleria) */
+.tpl-galeria { width: 100%; max-width: var(--tpl-galeria-largura, 100%); margin-inline: auto; }
+.tpl-galeria > img { width: 100%; display: block; height: auto; aspect-ratio: var(--tpl-galeria-proporcao, auto); object-fit: var(--tpl-galeria-ajuste, cover);
+  background: var(--tpl-galeria-fundo, transparent); border-radius: var(--tpl-galeria-cantos, 18px); }
 .tpl-galeria img.tpl-sombra { box-shadow: 0 8px 22px rgba(23,58,77,.15); }
 .tpl-titulo h1 { margin: 0 0 8px; font: 700 24px/1.25 Arial, sans-serif; color: var(--tpl-principal); letter-spacing: 0; }
 .tpl-titulo-linha { display: flex; align-items: center; gap: 14px; color: #6b7780; font-size: 13px; }
@@ -111,9 +114,9 @@ button.tpl-compartilhar { background: #fff; }
 .tpl-aba-conteudo blockquote { margin: 0 0 8px; padding-left: 12px; border-left: 3px solid var(--tpl-borda); }
 .tpl-aba-conteudo pre { padding: 8px 10px; border-radius: 6px; background: #f3f5f4; font-size: 13px; white-space: pre-wrap; }
 .tpl-miniaturas { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-.tpl-miniaturas button { width: 64px; height: 64px; padding: 0; border: 2px solid transparent; border-radius: 10px; overflow: hidden; background: none; }
+.tpl-miniaturas button { width: var(--tpl-miniatura-tamanho, 64px); aspect-ratio: var(--tpl-miniatura-proporcao, 1/1); height: auto; padding: 0; border: 2px solid transparent; border-radius: 10px; overflow: hidden; background: var(--tpl-galeria-fundo, none); }
 .tpl-miniaturas button[aria-pressed="true"] { border-color: var(--tpl-destaque); }
-.tpl-miniaturas img { width: 100%; height: 100%; object-fit: cover; border-radius: 0; }
+.tpl-miniaturas img { width: 100%; height: 100%; object-fit: var(--tpl-galeria-ajuste, cover); border-radius: 0; }
 
 /* Na loja: sem a moldura da prévia; a barra de compra fica fixa no rodapé e sobe ao rolar */
 .tpl.tpl-loja { max-width: none; min-height: 0; padding: 8px 0 24px; background: transparent; }

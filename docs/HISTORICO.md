@@ -260,6 +260,21 @@ Ainda não há backend, API de templates nem renderizador da loja.
   - rótulo de aba mais largo que a tela de 320 px: quebra em até 75% da largura.
 - **Lição do teste:** no Chrome de celular, o `innerWidth` cresce junto com o conteúdo largo. A comparação tem de ser com a largura da tela do aparelho.
 
+## Fase 16 — Tamanho padrão da galeria pelo template (07/10/2026)
+
+- **Pedido do Camillo:** ajustar na galeria o tamanho padrão das imagens conforme um parâmetro do template.
+- **Problema:** a foto principal ocupava a largura da coluna com a altura da própria foto, então a página "pulava" ao trocar de imagem. No teste, uma paisagem de 1600×600 media 186 px de altura e um retrato de 600×900, 744 px.
+- **Campos novos no bloco "Galeria de imagens"** (aba Aparência):
+  - **formato das fotos:** original, 1:1, 4:5, 3:4, 4:3, 3:2 ou 16:9;
+  - **encaixe**, só com formato fixo: preencher (recorta as bordas) ou foto inteira (com a cor de fundo escolhida);
+  - **largura máxima:** a coluna toda ou de 320 a 640 px;
+  - **cantos:** retos ou de 8 a 32 px;
+  - **miniaturas:** sem miniaturas ou de 48 a 96 px, no mesmo formato da foto principal.
+- Com um formato fixo, todas as fotos ficam do mesmo tamanho (no teste: 496 px com 1:1 e 600 px com 4:5, para qualquer foto).
+- **Compatível:** um template sem os campos novos (só `sombra`) fica como antes. Valores inválidos voltam ao padrão.
+- **Como é feito:** `estiloGaleria` gera variáveis CSS (`aspect-ratio` e `object-fit`). A loja e a prévia usam o mesmo bloco.
+- **Testes:** 3 novos (86 no total). Visual conferido no navegador com fotos de proporções diferentes.
+
 ## Próximos passos
 
 1. **Implantar (Camillo):** serviço Compose no EasyPanel a partir deste repositório e domínio **`templater.bomgado.net`** pelo túnel da Cloudflare apontando para `app:3001`. **Decisão de 06/10:** sem Cloudflare Access; o painel fica protegido só pelo login da Moovin. O caminho `/loja/*` precisa ficar **público** (sem Cloudflare Access), porque a loja o carrega no navegador do cliente.

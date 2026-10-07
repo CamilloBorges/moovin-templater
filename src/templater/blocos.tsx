@@ -100,15 +100,54 @@ export function Cartao({ conteudo, ...props }: PropsCartao & { conteudo: Slot })
   return <>{conteudo(classe, style)}</>;
 }
 
-export function Galeria({ sombra }: { sombra: SimNao }) {
+// Tamanho padrão da galeria, definido no template: todas as fotos saem no mesmo formato,
+// mesmo que no cadastro tenham tamanhos diferentes. Sem os campos (templates antigos), fica
+// como antes: a foto no formato original, na largura da coluna.
+export type FormatoGaleria = "original" | "1/1" | "4/5" | "3/4" | "4/3" | "3/2" | "16/9";
+export type PropsGaleria = {
+  sombra?: SimNao;
+  formato?: FormatoGaleria;
+  encaixe?: "preencher" | "inteira"; // preencher recorta as bordas; inteira mostra a foto toda, com fundo
+  fundo?: string; // cor atrás da foto inteira
+  largura?: number; // largura máxima em px (0 = a coluna toda)
+  cantos?: number; // raio em px
+  miniaturas?: number; // lado da miniatura em px (0 = sem miniaturas)
+};
+
+const FORMATOS: FormatoGaleria[] = ["original", "1/1", "4/5", "3/4", "4/3", "3/2", "16/9"];
+const pxValido = (v: unknown, padrao: number, max: number) => {
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 && n <= max ? n : padrao;
+};
+
+export function estiloGaleria(p: PropsGaleria): CSSProperties {
+  const formato = FORMATOS.includes(p.formato as FormatoGaleria) ? p.formato! : "original";
+  const vars: Record<string, string> = {
+    "--tpl-galeria-proporcao": formato === "original" ? "auto" : formato,
+    // No formato original a foto já tem a proporção dela: nada a recortar.
+    "--tpl-galeria-ajuste": formato !== "original" && p.encaixe === "inteira" ? "contain" : "cover",
+    "--tpl-galeria-cantos": `${pxValido(p.cantos, 18, 60)}px`,
+    // Miniatura no mesmo formato da foto principal (no original, quadrada).
+    "--tpl-miniatura-proporcao": formato === "original" ? "1/1" : formato,
+    "--tpl-miniatura-tamanho": `${pxValido(p.miniaturas, 64, 160) || 64}px`,
+  };
+  const largura = pxValido(p.largura, 0, 2000);
+  if (largura) vars["--tpl-galeria-largura"] = `${largura}px`;
+  if (formato !== "original" && p.encaixe === "inteira" && /^#[0-9a-f]{6}$/i.test(p.fundo ?? "")) vars["--tpl-galeria-fundo"] = p.fundo!;
+  return vars as CSSProperties;
+}
+
+export function Galeria(props: PropsGaleria) {
+  const { sombra } = props;
   const { moovin } = useAmbiente().produto;
   const [atual, setAtual] = useState(0);
   const imagens = moovin.imagens;
   if (!imagens.length) return <Vazio texto="Produto sem imagens" />;
+  const comMiniaturas = imagens.length > 1 && props.miniaturas !== 0;
   return (
-    <div className="tpl-galeria">
+    <div className="tpl-galeria" style={estiloGaleria(props)}>
       <img className={sombra === "sim" ? "tpl-sombra" : ""} src={imagens[Math.min(atual, imagens.length - 1)]} alt={moovin.nome} />
-      {imagens.length > 1 && (
+      {comMiniaturas && (
         <div className="tpl-miniaturas">
           {imagens.map((src, i) => (
             <button key={src + i} type="button" aria-pressed={i === atual} aria-label={`Imagem ${i + 1}`} onClick={() => setAtual(i)}>
