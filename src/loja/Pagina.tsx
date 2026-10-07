@@ -18,7 +18,7 @@ function Bloco({ item }: { item: Item }) {
   switch (item.type) {
     case "Colunas": return <B.Colunas proporcao={p.proporcao ?? "50/50"} esquerda={slot("esquerda")} direita={slot("direita")} />;
     case "Cartao": return <B.Cartao {...p} conteudo={slot("conteudo")} />;
-    case "Galeria": return <B.Galeria sombra={p.sombra} />;
+    case "Galeria": return <B.Galeria {...p} />;
     case "Titulo": return <B.Titulo mostrarCodigo={p.mostrarCodigo} mostrarAvaliacao={p.mostrarAvaliacao} mostrarCompartilhar={p.mostrarCompartilhar} />;
     case "LinhaCompra": return <B.LinhaCompra {...p} />;
     case "BarraCompraFixa": return <B.BarraCompraFixa {...p} />;

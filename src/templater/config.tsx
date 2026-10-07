@@ -19,7 +19,7 @@ const simNao = {
 type Blocos = {
   Colunas: { proporcao: "50/50" | "60/40" | "40/60"; esquerda: Slot; direita: Slot };
   Cartao: B.PropsCartao & { conteudo: Slot };
-  Galeria: { sombra: SimNao };
+  Galeria: B.PropsGaleria;
   Titulo: { mostrarCodigo: SimNao; mostrarAvaliacao: SimNao; mostrarCompartilhar: SimNao };
   LinhaCompra: B.PropsCompra;
   BarraCompraFixa: B.PropsCompra & { corFundo?: string };
@@ -130,9 +130,51 @@ export const config: Config<ComNome<Blocos>, RaizTemplate> = {
     },
     Galeria: {
       label: "Galeria de imagens",
-      fields: { sombra: { ...simNao, label: "Sombra na imagem" } },
-      defaultProps: { sombra: "sim" },
-      render: ({ sombra }) => <B.Galeria sombra={sombra} />,
+      fields: {
+        formato: {
+          type: "select",
+          label: "Formato das fotos",
+          options: [
+            { label: "Original de cada foto", value: "original" },
+            { label: "Quadrado (1:1)", value: "1/1" },
+            { label: "Retrato (4:5)", value: "4/5" },
+            { label: "Retrato (3:4)", value: "3/4" },
+            { label: "Paisagem (4:3)", value: "4/3" },
+            { label: "Paisagem (3:2)", value: "3/2" },
+            { label: "Panorâmico (16:9)", value: "16/9" },
+          ],
+        },
+        encaixe: {
+          type: "radio",
+          label: "Encaixe da foto no formato",
+          options: [{ label: "Preencher (recorta as bordas)", value: "preencher" }, { label: "Foto inteira (com fundo)", value: "inteira" }],
+        },
+        fundo: campoCor("Cor atrás da foto inteira"),
+        largura: {
+          type: "select",
+          label: "Largura máxima",
+          options: [{ label: "A coluna toda", value: 0 }, ...[320, 400, 480, 560, 640].map((px) => ({ label: `${px} px`, value: px }))],
+        },
+        cantos: {
+          type: "select",
+          label: "Cantos",
+          options: [{ label: "Retos", value: 0 }, ...[8, 12, 18, 24, 32].map((px) => ({ label: `Arredondados ${px} px`, value: px }))],
+        },
+        miniaturas: {
+          type: "select",
+          label: "Miniaturas",
+          options: [{ label: "Sem miniaturas", value: 0 }, ...[48, 64, 80, 96].map((px) => ({ label: `${px} px`, value: px }))],
+        },
+        sombra: { ...simNao, label: "Sombra na imagem" },
+      },
+      defaultProps: { formato: "original", encaixe: "preencher", fundo: "", largura: 0, cantos: 18, miniaturas: 64, sombra: "sim" },
+      // Encaixe e fundo só fazem sentido com um formato fixo; o fundo, só com a foto inteira.
+      resolveFields: (data, { fields }) => {
+        const { encaixe, fundo, ...resto } = fields;
+        const fixo = (data.props.formato ?? "original") !== "original";
+        return { ...resto, ...(fixo ? { encaixe } : {}), ...(fixo && data.props.encaixe === "inteira" ? { fundo } : {}) } as typeof fields;
+      },
+      render: (props) => <B.Galeria {...props} />,
     },
     Titulo: {
       label: "Nome do produto",
