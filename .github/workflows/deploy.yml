@@ -1,0 +1,36 @@
+# Deploy automático no EasyPanel (serviço Compose "templater", projeto "e-comerce").
+# Roda quando os Testes terminam com sucesso num push na main, ou seja, depois do merge de
+# um Pull Request aprovado. O link do deploy fica no segredo EASYPANEL_DEPLOY_URL, porque
+# este repositório é público e o link dá a qualquer um o poder de disparar o deploy.
+name: Deploy
+on:
+  workflow_run:
+    workflows: [Testes]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch: # deploy manual pela aba Actions, se precisar
+concurrency:
+  group: deploy-producao
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    environment: producao
+    steps:
+      - name: Aciona o deploy no EasyPanel
+        env:
+          URL: ${{ secrets.EASYPANEL_DEPLOY_URL }}
+        run: |
+          if [ -z "$URL" ]; then echo "::error::Segredo EASYPANEL_DEPLOY_URL não configurado"; exit 1; fi
+          curl -fsS -X POST --retry 3 --retry-delay 10 --max-time 60 "$URL" -o /dev/null -w "EasyPanel respondeu HTTP %{http_code}\n"
+      - name: Confere o painel no ar
+        run: |
+          # O EasyPanel reconstrói a imagem; espera o painel voltar a responder.
+          for i in $(seq 1 30); do
+            if curl -fsS --max-time 10 https://templater.bomgado.net/api/sessao > /dev/null; then echo "Painel respondendo"; exit 0; fi
+            sleep 20
+          done
+          echo "::warning::O painel não respondeu em 10 minutos; confira o log do deploy no EasyPanel"

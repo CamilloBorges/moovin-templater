@@ -1,7 +1,9 @@
-# Roda os testes e o build a cada push e pull request.
+# Roda os testes e o build em cada pull request e em cada push na main (merge).
+# Com sucesso na main, o workflow Deploy publica no EasyPanel.
 name: Testes
 on:
   push:
+    branches: [main]
   pull_request:
 jobs:
   testes:
