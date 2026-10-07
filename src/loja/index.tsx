@@ -1,7 +1,7 @@
 import { createRoot, type Root } from "react-dom/client";
 import css from "../templater/pagina.css?inline";
 import type { TemplateData } from "../templater/padrao";
-import type { Badge, ComplementoProduto } from "../templater/produto";
+import type { Badge, ComplementoProduto, MapaCorteResolvido } from "../templater/produto";
 import { criarLigacao, encontrar, extrairProduto, lerCodigo, temEscolhaDeVariacao } from "./nativo";
 import { Pagina } from "./Pagina";
 
@@ -23,8 +23,8 @@ const OCULTO = "data-templater-oculto";
 // Endereço da loja no nosso servidor, tirado do próprio script (…/loja/<conta>/produto.js).
 const BASE = ((document.currentScript as HTMLScriptElement | null)?.src ?? "").replace(/\/produto\.js(\?.*)?$/, "");
 
-// Complemento do produto aberto (com os badges): undefined = buscando; null = não tem (layout da Moovin).
-type Dados = { complemento: ComplementoProduto; badges: Badge[] };
+// Complemento do produto aberto (com os badges e o Mapa de Corte): undefined = buscando; null = não tem (layout da Moovin).
+type Dados = { complemento: ComplementoProduto; badges: Badge[]; mapaCorte: MapaCorteResolvido | null };
 let busca: { chave: string; complemento: Dados | null | undefined } | null = null;
 function complementoDe(sku: string, aoChegar: () => void): Dados | null | undefined {
   const chave = `${location.pathname}|${sku}`;
@@ -33,8 +33,10 @@ function complementoDe(sku: string, aoChegar: () => void): Dados | null | undefi
   busca = atual;
   fetch(`${BASE}/complemento/${encodeURIComponent(sku)}`)
     .then((r) => (r.ok ? r.json() : null))
-    .then((d: { complemento?: ComplementoProduto; badges?: Badge[] } | null) => {
-      atual.complemento = d?.complemento ? { complemento: { ...d.complemento, badges: d.complemento.badges ?? [] }, badges: d.badges ?? [] } : null;
+    .then((d: { complemento?: ComplementoProduto; badges?: Badge[]; mapaCorte?: MapaCorteResolvido | null } | null) => {
+      atual.complemento = d?.complemento
+        ? { complemento: { ...d.complemento, badges: d.complemento.badges ?? [] }, badges: d.badges ?? [], mapaCorte: d.mapaCorte ?? null }
+        : null;
     })
     .catch(() => { atual.complemento = null; })
     .finally(aoChegar);
@@ -62,7 +64,7 @@ function sincronizar(template: TemplateData, agendar: () => void) {
   if (!sku || !BASE) return;
   const dados = complementoDe(sku, agendar);
   if (!dados) return;
-  const produto = extrairProduto(nativo, dados.complemento, dados.badges);
+  const produto = { ...extrairProduto(nativo, dados.complemento, dados.badges), mapaCorte: dados.mapaCorte };
   if (!produto.moovin.nome) return;
 
   const container = document.createElement("div");

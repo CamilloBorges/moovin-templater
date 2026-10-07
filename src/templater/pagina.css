@@ -12,6 +12,18 @@
 .tpl-galeria > img { width: 100%; display: block; height: auto; aspect-ratio: var(--tpl-galeria-proporcao, auto); object-fit: var(--tpl-galeria-ajuste, cover);
   background: var(--tpl-galeria-fundo, transparent); border-radius: var(--tpl-galeria-cantos, 18px); }
 .tpl-galeria img.tpl-sombra { box-shadow: 0 8px 22px rgba(23,58,77,.15); }
+/* Mapa de Corte: último item da galeria, no formato da galeria (no original, 4:5). Textos em cqw
+   para a composição escalar como uma imagem. */
+.tpl-mapa { container-type: inline-size; width: 100%; aspect-ratio: var(--tpl-galeria-proporcao-mapa, 4/5); box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 2.5cqw;
+  padding: 5cqw 5cqw 6cqw; overflow: hidden; background: var(--tpl-mapa-fundo, #0b0b0d); border-radius: var(--tpl-galeria-cantos, 18px); text-align: center; }
+.tpl-mapa-logo { max-width: 40%; max-height: 16%; object-fit: contain; }
+.tpl-mapa-titulo { font-family: var(--tpl-mapa-titulo-fonte, Georgia, "Times New Roman", serif); color: var(--tpl-mapa-titulo-cor, #c08a4e); font-size: 9cqw; font-weight: 700; line-height: 1.1;
+  text-transform: uppercase; letter-spacing: .02em; overflow-wrap: anywhere; }
+.tpl-mapa-desenho { flex: 1 1 auto; min-height: 0; width: 100%; }
+.tpl-mapa-texto { margin: 0; font-family: var(--tpl-mapa-texto-fonte, Georgia, "Times New Roman", serif); color: var(--tpl-mapa-texto-cor, #ffffff); font-size: 4cqw; line-height: 1.35;
+  display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
+.tpl-miniaturas .tpl-miniatura-mapa { background: var(--tpl-mapa-fundo, #0b0b0d); display: grid; place-items: center; }
+.tpl-miniatura-mapa svg { width: 100%; height: 100%; }
 .tpl-titulo h1 { margin: 0 0 8px; font: 700 24px/1.25 Arial, sans-serif; color: var(--tpl-principal); letter-spacing: 0; }
 .tpl-titulo-linha { display: flex; align-items: center; gap: 14px; color: #6b7780; font-size: 13px; }
 .tpl-estrelas { color: #d5a13d; }

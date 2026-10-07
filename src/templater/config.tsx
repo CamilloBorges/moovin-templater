@@ -19,7 +19,7 @@ const simNao = {
 type Blocos = {
   Colunas: { proporcao: "50/50" | "60/40" | "40/60"; esquerda: Slot; direita: Slot };
   Cartao: B.PropsCartao & { conteudo: Slot };
-  Galeria: B.PropsGaleria;
+  Galeria: B.PropsGaleria & { mapa?: B.PropsMapaCorte };
   Titulo: { mostrarCodigo: SimNao; mostrarAvaliacao: SimNao; mostrarCompartilhar: SimNao };
   LinhaCompra: B.PropsCompra;
   BarraCompraFixa: B.PropsCompra & { corFundo?: string };
@@ -166,8 +166,23 @@ export const config: Config<ComNome<Blocos>, RaizTemplate> = {
           options: [{ label: "Sem miniaturas", value: 0 }, ...[48, 64, 80, 96].map((px) => ({ label: `${px} px`, value: px }))],
         },
         sombra: { ...simNao, label: "Sombra na imagem" },
+        mapa: {
+          type: "object",
+          label: "Mapa de Corte (último item, nos produtos com corte cadastrado)",
+          objectFields: {
+            mostrar: { ...simNao, label: "Mostrar o Mapa de Corte" },
+            fundo: campoCor("Cor de fundo"),
+            logo: campoImagem("Logotipo no topo"),
+            titulo: { type: "object", label: "Nome do produto", objectFields: { fonte: campoFonte(), cor: campoCor("Cor") } },
+            corRegiao: campoCor("Cor da região do corte"),
+            texto: { type: "object", label: "Descrição do corte", objectFields: { fonte: campoFonte(), cor: campoCor("Cor") } },
+          },
+        },
       },
-      defaultProps: { formato: "original", encaixe: "preencher", fundo: "", largura: 0, cantos: 18, miniaturas: 64, sombra: "sim" },
+      defaultProps: {
+        formato: "original", encaixe: "preencher", fundo: "", largura: 0, cantos: 18, miniaturas: 64, sombra: "sim",
+        mapa: { mostrar: "sim", fundo: "#0b0b0d", logo: "", titulo: { fonte: "playfair", cor: "#c08a4e" }, corRegiao: "#c08a4e", texto: { fonte: "playfair", cor: "#ffffff" } },
+      },
       // Encaixe e fundo só fazem sentido com um formato fixo; o fundo, só com a foto inteira.
       resolveFields: (data, { fields }) => {
         const { encaixe, fundo, ...resto } = fields;

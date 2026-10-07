@@ -186,3 +186,41 @@ describe("Galeria: tamanho padrão definido no template", () => {
     expect(galeria({ formato: "9/1" }).style.getPropertyValue("--tpl-galeria-proporcao")).toBe("auto");
   });
 });
+
+describe("Galeria: Mapa de Corte no fim", () => {
+  const mapaCorte = {
+    imagem: "https://exemplo/bovino.png", largura: 1000, altura: 600, numero: 29, corte: "Ossobuco",
+    regiao: [[0.8, 0.6], [0.9, 0.6], [0.9, 0.7]] as [number, number][], descricao: "Corte da perna, com o osso no centro.",
+  };
+  const montar = (props: Record<string, unknown>, imagens = ["https://exemplo/1.jpg"]) => {
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    raiz = createRoot(container);
+    const template = { root: { props: {} }, content: [{ type: "Galeria", props: { id: "g", ...props } }] } as unknown as TemplateData;
+    act(() => raiz!.render(<Pagina template={template} produto={{ ...produto, moovin: { ...produto.moovin, imagens }, mapaCorte }} loja={ligacaoSimulada(1)} />));
+    return container;
+  };
+
+  it("entra como última miniatura e, escolhida, mostra o nome do produto, a região e a descrição", () => {
+    const c = montar({ mapa: { mostrar: "sim", corRegiao: "#aa5500" } });
+    const botoes = c.querySelectorAll(".tpl-miniaturas button");
+    expect(botoes).toHaveLength(2);
+    expect(botoes[1].getAttribute("aria-label")).toBe("Mapa de Corte");
+    act(() => (botoes[1] as HTMLButtonElement).click());
+    const mapa = c.querySelector(".tpl-mapa")!;
+    expect(mapa.querySelector(".tpl-mapa-titulo")!.textContent).toBe("Cubos de Panela");
+    expect(mapa.querySelector(".tpl-mapa-texto")!.textContent).toBe(mapaCorte.descricao);
+    const poligono = mapa.querySelector("polygon")!;
+    expect(poligono.getAttribute("points")).toBe("800.0,360.0 900.0,360.0 900.0,420.0");
+    expect(poligono.getAttribute("fill")).toBe("#aa5500");
+    expect(mapa.querySelector("image")!.getAttribute("href")).toBe(mapaCorte.imagem);
+  });
+
+  it("produto sem fotos e com Mapa de Corte mostra só o mapa; o template pode esconder o mapa", () => {
+    expect(montar({}, []).querySelector(".tpl-mapa .tpl-mapa-titulo")!.textContent).toBe("Cubos de Panela");
+    act(() => raiz?.unmount());
+    const escondido = montar({ mapa: { mostrar: "nao" } });
+    expect(escondido.querySelector(".tpl-miniaturas")).toBeNull();
+    expect(escondido.querySelector(".tpl-mapa")).toBeNull();
+  });
+});

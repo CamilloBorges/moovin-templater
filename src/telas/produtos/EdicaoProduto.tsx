@@ -4,7 +4,9 @@ import { carregarCatalogo, type Catalogo } from "../../produtos/catalogo";
 import type { ProdutoCadastro, Variacao } from "../../produtos/modelo";
 import { carregarProduto, salvarProduto, type Original } from "../../produtos/moovin";
 import { templatePublicado, type TemplateData } from "../../templater/padrao";
-import { formatarMoeda, paraTemplate, URL_LOJA as LOJA, type Badge, type ModeloCadastro, type TipoAba } from "../../templater/produto";
+import { formatarMoeda, paraTemplate, URL_LOJA as LOJA, type Badge, type MapaCortes, type ModeloCadastro, type TipoAba } from "../../templater/produto";
+import { listarMapas } from "../../produtos/mapas";
+import { MapaCorteDoProduto } from "./MapaCorteDoProduto";
 import { aplicarModelo, listarModelos, listarTiposAba, modeloPadrao, obrigatoriasVazias, sincronizarTitulos } from "../../produtos/modelos";
 import { listarBadges } from "../../produtos/badges";
 import { Alternador, Campo, CampoReferencia, Numero, Secao, Texto } from "./campos";
@@ -30,6 +32,9 @@ function validar(p: ProdutoCadastro, tipos: TipoAba[]): Record<string, string> {
     if (v.preco.promocional > 0 && v.preco.promocional >= v.preco.venda)
       erros[`promo-${i}`] = msg("o preço promocional precisa ser menor que o preço do produto");
   });
+  // Mapa de Corte ativado precisa do animal e do corte.
+  const mapaCorte = p.complemento.mapaCorte;
+  if (mapaCorte && (!mapaCorte.mapa || !mapaCorte.corte)) erros["mapa-corte"] = "Mapa de Corte: escolha o animal e o corte (ou desative)";
   // Abas obrigatórias do cadastro sem conteúdo (Campos Complementares).
   obrigatoriasVazias(p.complemento.abas, tipos).forEach((titulo, i) => { erros[`aba-${i}`] = `Aba "${titulo}": obrigatória, preencha o conteúdo`; });
   return erros;
@@ -39,10 +44,10 @@ function validar(p: ProdutoCadastro, tipos: TipoAba[]): Record<string, string> {
 const errosDasAbas = (erros: Record<string, string>) =>
   new Map(Object.entries(erros).filter(([campo]) => campo.startsWith("aba-")).map(([campo, texto]) => [Number(campo.slice(4)), texto]));
 
-function PreviaProduto({ produto, badges, fechar }: { produto: ProdutoCadastro; badges: Badge[]; fechar: () => void }) {
+function PreviaProduto({ produto, badges, mapas, fechar }: { produto: ProdutoCadastro; badges: Badge[]; mapas: MapaCortes[]; fechar: () => void }) {
   const [template, setTemplate] = useState<TemplateData | null>(null);
   useEffect(() => { templatePublicado().then(setTemplate); }, []);
-  return <PreviaPagina titulo="Prévia com o template publicado" template={template} produto={paraTemplate(produto, badges)} fechar={fechar} />;
+  return <PreviaPagina titulo="Prévia com o template publicado" template={template} produto={paraTemplate(produto, badges, mapas)} fechar={fechar} />;
 }
 
 // Grupo recolhível da tela do produto (Campos do Moovin / Campos Complementares).
@@ -66,7 +71,7 @@ function Grupo({ titulo, descricao, aberto, aoAlternar, children }: {
 
 // Carrega o produto da Moovin (com o complemento) e o catálogo de apoio.
 export function EdicaoProduto({ id }: { id: string }) {
-  const [dados, setDados] = useState<{ original: Original; catalogo: Catalogo; badges: Badge[]; tipos: TipoAba[]; modelos: ModeloCadastro[] } | null>(null);
+  const [dados, setDados] = useState<{ original: Original; catalogo: Catalogo; badges: Badge[]; tipos: TipoAba[]; modelos: ModeloCadastro[]; mapas: MapaCortes[] } | null>(null);
   const [erro, setErro] = useState("");
   const [carga, setCarga] = useState(0);
   const [mensagem, setMensagem] = useState(""); // resultado do último salvamento, mostrado após reler
@@ -79,11 +84,12 @@ export function EdicaoProduto({ id }: { id: string }) {
       listarBadges().catch(() => [] as Badge[]),
       listarTiposAba().catch(() => [] as TipoAba[]),
       listarModelos().catch(() => [] as ModeloCadastro[]),
+      listarMapas().catch(() => [] as MapaCortes[]),
     ]).then(
-      ([original, catalogo, badges, tipos, modelos]) => {
+      ([original, catalogo, badges, tipos, modelos, mapas]) => {
         // Abas do cadastro com o título atual (renomeado em Abas e modelos), sem contar como alteração.
         const complemento = { ...original.cadastro.complemento, abas: sincronizarTitulos(original.cadastro.complemento.abas, tipos) };
-        setDados({ original: { ...original, cadastro: { ...original.cadastro, complemento } }, catalogo, badges, tipos, modelos });
+        setDados({ original: { ...original, cadastro: { ...original.cadastro, complemento } }, catalogo, badges, tipos, modelos, mapas });
       },
       (e) => setErro(e instanceof ErroApi && e.status === 404 ? "Produto não encontrado na Moovin." : `Não foi possível carregar o produto: ${e.message}`),
     );
@@ -98,18 +104,20 @@ export function EdicaoProduto({ id }: { id: string }) {
       todosBadges={dados.badges}
       tipos={dados.tipos}
       modelos={dados.modelos}
+      mapas={dados.mapas}
       avisoInicial={mensagem}
       recarregar={(texto) => { setMensagem(texto); setCarga((c) => c + 1); }}
     />
   );
 }
 
-function FormularioProduto({ original, catalogo, todosBadges, tipos, modelos, avisoInicial, recarregar }: {
+function FormularioProduto({ original, catalogo, todosBadges, tipos, modelos, mapas, avisoInicial, recarregar }: {
   original: Original;
   catalogo: Catalogo;
   todosBadges: Badge[];
   tipos: TipoAba[];
   modelos: ModeloCadastro[];
+  mapas: MapaCortes[];
   avisoInicial: string;
   recarregar: (mensagem: string) => void;
 }) {
@@ -158,9 +166,10 @@ function FormularioProduto({ original, catalogo, todosBadges, tipos, modelos, av
     if (Object.keys(erros).length) {
       setMostrarErros(true);
       setAviso("Corrija os campos destacados antes de salvar.");
-      // Erros de abas ficam nos Campos Complementares; os outros (fora o nome) são de campos da Moovin.
-      if (Object.keys(erros).some((campo) => campo !== "nome" && !campo.startsWith("aba-"))) setMoovinAberto(true);
-      if (Object.keys(erros).some((campo) => campo.startsWith("aba-"))) setComplementaresAberto(true);
+      // Erros das abas e do Mapa de Corte ficam nos Campos Complementares; os outros (fora o nome), nos da Moovin.
+      const complementar = (campo: string) => campo.startsWith("aba-") || campo === "mapa-corte";
+      if (Object.keys(erros).some((campo) => campo !== "nome" && !complementar(campo))) setMoovinAberto(true);
+      if (Object.keys(erros).some(complementar)) setComplementaresAberto(true);
       return;
     }
     setSalvando(true);
@@ -389,11 +398,18 @@ function FormularioProduto({ original, catalogo, todosBadges, tipos, modelos, av
             todos={todosBadges}
             aoMudar={(badges) => alterar({ complemento: { ...produto.complemento, badges } })}
           />
+          <MapaCorteDoProduto
+            valor={produto.complemento.mapaCorte}
+            mapas={mapas}
+            nomeProduto={produto.nome}
+            erro={errosVisiveis["mapa-corte"]}
+            aoMudar={(mapaCorte) => alterar({ complemento: { ...produto.complemento, mapaCorte } })}
+          />
         </Grupo>
 
       </div>
 
-      {previa && <PreviaProduto produto={produto} badges={todosBadges} fechar={() => setPrevia(false)} />}
+      {previa && <PreviaProduto produto={produto} badges={todosBadges} mapas={mapas} fechar={() => setPrevia(false)} />}
     </>
   );
 }

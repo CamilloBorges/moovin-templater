@@ -8,6 +8,7 @@ import { randomUUID } from "node:crypto";
 import { badges, complementos, sessoes, templates, type DocBadge } from "./banco";
 import { repassar } from "./moovin";
 import { resolverTitulosAbas, rotasAbas } from "./abas";
+import { resolverMapaCorteLoja, rotasMapas } from "./mapas";
 import { exigirSessao, rotasSessao } from "./sessao";
 import { config } from "./config";
 
@@ -23,6 +24,7 @@ export async function criarApp({ log = true } = {}) {
 
   await rotasSessao(app);
   await rotasAbas(app);
+  await rotasMapas(app);
 
   // Serviços da Moovin que o painel pode chamar (cadastro, preço, estoque, catálogo, SEO, arquivos e scripts da loja).
   const SERVICOS = new Set(["oms-product", "oms-pricing", "oms-inventory", "oms-catalog", "eco-seo", "dam-storage", "eco-store"]);
@@ -74,7 +76,9 @@ export async function criarApp({ log = true } = {}) {
     const porId = new Map(lista.map((b) => [b._id, publico(b)]));
     // Abas do cadastro com o título atual do cadastro.
     const complemento = await resolverTitulosAbas(pedido.params.conta, doc.dados);
-    return { complemento, badges: ids.map((id) => porId.get(id)).filter(Boolean) };
+    // Mapa de Corte já resolvido (imagem do animal, contorno do corte e descrição).
+    const mapaCorte = await resolverMapaCorteLoja(pedido.params.conta, doc.dados);
+    return { complemento, badges: ids.map((id) => porId.get(id)).filter(Boolean), mapaCorte };
   });
 
   // Complemento do produto no painel (por id do produto na Moovin).

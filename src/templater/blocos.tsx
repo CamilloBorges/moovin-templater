@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import DOMPurify from "dompurify";
-import { formatarMoeda, precoPorUnidade, type Aba, type Badge, type ProdutoTemplate, textoUnidade } from "./produto";
+import { formatarMoeda, precoPorUnidade, type Aba, type Badge, type MapaCorteResolvido, type ProdutoTemplate, textoUnidade } from "./produto";
+import { pontosSvg } from "./mapa";
 import { estilo, useFontes, varsTexto, type EstiloTexto } from "./estilo";
 
 // Blocos da página de produto. São os mesmos componentes no editor (prévia, dentro do Puck) e na
@@ -124,6 +125,8 @@ export function estiloGaleria(p: PropsGaleria): CSSProperties {
   const formato = FORMATOS.includes(p.formato as FormatoGaleria) ? p.formato! : "original";
   const vars: Record<string, string> = {
     "--tpl-galeria-proporcao": formato === "original" ? "auto" : formato,
+    // A imagem do Mapa de Corte segue o formato da galeria; no original, 4:5 (como um post).
+    "--tpl-galeria-proporcao-mapa": formato === "original" ? "4/5" : formato,
     // No formato original a foto já tem a proporção dela: nada a recortar.
     "--tpl-galeria-ajuste": formato !== "original" && p.encaixe === "inteira" ? "contain" : "cover",
     "--tpl-galeria-cantos": `${pxValido(p.cantos, 18, 60)}px`,
@@ -137,23 +140,76 @@ export function estiloGaleria(p: PropsGaleria): CSSProperties {
   return vars as CSSProperties;
 }
 
-export function Galeria(props: PropsGaleria) {
+// Visual da imagem do Mapa de Corte (último item da galeria), definido no template.
+export type PropsMapaCorte = {
+  mostrar?: SimNao;
+  fundo?: string;
+  logo?: string; // imagem no topo (ex.: o logotipo do Armazém)
+  titulo?: EstiloTexto; // nome do produto
+  texto?: EstiloTexto; // descrição do corte
+  corRegiao?: string; // cor que destaca a região do corte
+};
+
+const corOu = (cor: string | undefined, padrao: string) => (/^#[0-9a-f]{6}$/i.test(cor ?? "") ? cor! : padrao);
+
+// O animal com a região do corte destacada (sem textos): na imagem do mapa e na miniatura.
+function DesenhoMapa({ mapa, corRegiao }: { mapa: MapaCorteResolvido; corRegiao: string }) {
+  const { largura: w, altura: h } = mapa;
+  return (
+    <svg className="tpl-mapa-desenho" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="xMidYMid meet" role="img" aria-label={`Origem do corte: ${mapa.corte}`}>
+      <image href={mapa.imagem} width={w} height={h} />
+      <polygon points={pontosSvg(mapa.regiao, w, h)} fill={corRegiao} fillOpacity={0.9} stroke={corRegiao} strokeWidth={Math.max(w, h) / 400} strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// Imagem do Mapa de Corte, como o card do Ossobuco: logotipo, nome do produto, o animal com a
+// região do corte destacada e a descrição. Desenhada na página (vetor), no formato da galeria.
+export function MapaCorteImagem({ mapa, titulo, p }: { mapa: MapaCorteResolvido; titulo: string; p: PropsMapaCorte }) {
+  useFontes(p.titulo?.fonte, p.texto?.fonte);
+  const corRegiao = corOu(p.corRegiao, "#c08a4e");
+  return (
+    <div className="tpl-mapa" style={estilo({ "--tpl-mapa-fundo": corOu(p.fundo, "#0b0b0d") }, varsTexto("tpl-mapa-titulo", p.titulo), varsTexto("tpl-mapa-texto", p.texto))}>
+      {p.logo && <img className="tpl-mapa-logo" src={p.logo} alt="" />}
+      <div className="tpl-mapa-titulo">{titulo}</div>
+      <DesenhoMapa mapa={mapa} corRegiao={corRegiao} />
+      {mapa.descricao && <p className="tpl-mapa-texto">{mapa.descricao}</p>}
+    </div>
+  );
+}
+
+export function Galeria(props: PropsGaleria & { mapa?: PropsMapaCorte }) {
   const { sombra } = props;
-  const { moovin } = useAmbiente().produto;
+  const { moovin, mapaCorte } = useAmbiente().produto;
   const [atual, setAtual] = useState(0);
   const imagens = moovin.imagens;
-  if (!imagens.length) return <Vazio texto="Produto sem imagens" />;
-  const comMiniaturas = imagens.length > 1 && props.miniaturas !== 0;
+  // O Mapa de Corte entra como o último item da galeria (se o produto tem e o template mostra).
+  const mapa = mapaCorte && props.mapa?.mostrar !== "nao" ? mapaCorte : null;
+  const total = imagens.length + (mapa ? 1 : 0);
+  if (!total) return <Vazio texto="Produto sem imagens" />;
+  const indice = Math.min(atual, total - 1);
+  const comMiniaturas = total > 1 && props.miniaturas !== 0;
+  const corRegiao = corOu(props.mapa?.corRegiao, "#c08a4e");
   return (
     <div className="tpl-galeria" style={estiloGaleria(props)}>
-      <img className={sombra === "sim" ? "tpl-sombra" : ""} src={imagens[Math.min(atual, imagens.length - 1)]} alt={moovin.nome} />
+      {mapa && indice === imagens.length ? (
+        <MapaCorteImagem mapa={mapa} titulo={moovin.nome} p={props.mapa ?? {}} />
+      ) : (
+        <img className={sombra === "sim" ? "tpl-sombra" : ""} src={imagens[indice]} alt={moovin.nome} />
+      )}
       {comMiniaturas && (
         <div className="tpl-miniaturas">
           {imagens.map((src, i) => (
-            <button key={src + i} type="button" aria-pressed={i === atual} aria-label={`Imagem ${i + 1}`} onClick={() => setAtual(i)}>
+            <button key={src + i} type="button" aria-pressed={i === indice} aria-label={`Imagem ${i + 1}`} onClick={() => setAtual(i)}>
               <img src={src} alt="" />
             </button>
           ))}
+          {mapa && (
+            <button type="button" className="tpl-miniatura-mapa" aria-pressed={indice === imagens.length} aria-label="Mapa de Corte" onClick={() => setAtual(imagens.length)}
+              style={{ "--tpl-mapa-fundo": corOu(props.mapa?.fundo, "#0b0b0d") } as CSSProperties}>
+              <DesenhoMapa mapa={mapa} corRegiao={corRegiao} />
+            </button>
+          )}
         </div>
       )}
     </div>
