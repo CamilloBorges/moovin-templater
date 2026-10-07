@@ -260,10 +260,30 @@ Ainda não há backend, API de templates nem renderizador da loja.
   - rótulo de aba mais largo que a tela de 320 px: quebra em até 75% da largura.
 - **Lição do teste:** no Chrome de celular, o `innerWidth` cresce junto com o conteúdo largo. A comparação tem de ser com a largura da tela do aparelho.
 
+## Fase 15 — Cadastro de abas e modelos de cadastro (07/10/2026)
+
+- **Pedido do Camillo:** cadastro das abas e um "Modelo Padrão", para o produto novo já vir com uma sequência e uma configuração de abas.
+- **Decisões (07/10):**
+  - vários modelos com nome (ex.: Carnes, Bebidas), e **um é o padrão**;
+  - cada aba do cadastro tem **título, conteúdo modelo, obrigatória e instrução de preenchimento**;
+  - a aba do produto fica **ligada ao cadastro pelo título**: renomear no cadastro renomeia em todos os produtos (a loja recebe o título resolvido pelo servidor). O conteúdo é de cada produto. Continuam existindo abas avulsas;
+  - produtos existentes usam o botão **"Aplicar modelo"**.
+- **Tela "Abas e modelos"** (`#/abas`): abas cadastradas (com os modelos que usam cada uma) e modelos (sequência com ↑ ↓ ×, "Tornar padrão"). O primeiro modelo nasce padrão; marcar outro desmarca; excluir o padrão passa o padrão para o mais antigo. Título de aba repetido é recusado (sem diferenciar acento e maiúscula).
+- **Tela do produto:**
+  - produto ainda **sem Complemento** abre com as abas do modelo padrão já incluídas (aproveitando as que vieram da descrição da Moovin), com aviso;
+  - **"Aplicar modelo"**: as abas do modelo vêm primeiro, na ordem do modelo, aproveitando as que o produto já tem (do mesmo cadastro ou avulsa com o mesmo título, que passa a ser do cadastro). Conteúdo já escrito não é apagado, e aba vazia recebe o conteúdo modelo. As abas fora do modelo vão para o fim. Aplicar duas vezes não duplica;
+  - aba do cadastro mostra o título fixo, os selos (obrigatória, cadastro) e a instrução; **obrigatória vazia bloqueia o salvamento** e a aba fica destacada;
+  - "+ Adicionar aba…" oferece as abas do cadastro que faltam e a aba avulsa.
+- **Excluir uma aba do cadastro:** sai dos modelos; nos produtos, vira avulsa, com o último título e o conteúdo.
+- **Servidor:** coleções `tiposAba` e `modelos` no MongoDB; rotas em `server/abas.ts`; a rota pública do Complemento resolve os títulos.
+- **Testes:** 92 (6 da lógica de modelos e 3 de rotas novas). Telas conferidas no navegador com API simulada: cadastro, modelo, produto sem Complemento, "Aplicar modelo", bloqueio da obrigatória e gravação com o `tipo`.
+- **Lição do teste:** com zoom de 125% no Windows, a coordenada calculada pelo `getBoundingClientRect` não bate com a do clique da automação, e o texto caiu num `select` da barra do editor. Para digitar no editor, focar o elemento pelo JavaScript.
+
 ## Próximos passos
 
 1. **Implantar (Camillo):** serviço Compose no EasyPanel a partir deste repositório e domínio **`templater.bomgado.net`** pelo túnel da Cloudflare apontando para `app:3001`. **Decisão de 06/10:** sem Cloudflare Access; o painel fica protegido só pelo login da Moovin. O caminho `/loja/*` precisa ficar **público** (sem Cloudflare Access), porque a loja o carrega no navegador do cliente.
 2. Entrar no painel publicado com o login da Moovin e publicar o template padrão.
 3. Trocar o `Script_Produto` da Moovin para o tipo **URL** (`https://<domínio>/loja/<id da loja>/produto.js`) e testar no shoptest.
 4. Primeiro "Salvar na Moovin" pelo Camillo (os Cubos), convertendo a descrição para a convenção nova.
-5. Depois: converter os demais produtos; versões e rollback de template; atributos reais.
+5. Cadastrar as abas e os modelos reais (ex.: Carnes, Congelados, Mercearia) antes de converter os produtos.
+6. Depois: converter os demais produtos; versões e rollback de template; atributos reais.

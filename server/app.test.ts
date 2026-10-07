@@ -237,3 +237,48 @@ describe("Implantação", () => {
     }
   });
 });
+
+describe("Abas e modelos de cadastro", () => {
+  const enviar = (metodo: "POST" | "PUT" | "DELETE", url: string, payload?: object) =>
+    app.inject({ method: metodo, url: `/api/${url}`, headers: { cookie }, ...(payload ? { payload } : {}) });
+  const listar = async (url: string) => (await app.inject({ url: `/api/${url}`, headers: { cookie } })).json();
+
+  it("cadastra abas, recusa título vazio ou repetido", async () => {
+    expect((await enviar("POST", "tipos-aba", { titulo: " " })).statusCode).toBe(400);
+    const preparo = (await enviar("POST", "tipos-aba", { titulo: "Preparo", conteudoModelo: "<p>Modo:</p>", obrigatoria: true, instrucao: "Tempo e método" })).json();
+    expect(preparo).toMatchObject({ titulo: "Preparo", obrigatoria: true, instrucao: "Tempo e método" });
+    expect((await enviar("POST", "tipos-aba", { titulo: "prepáro" })).statusCode).toBe(409);
+  });
+
+  it("o primeiro modelo nasce padrão, marcar outro desmarca, e ids desconhecidos ou repetidos saem da sequência", async () => {
+    const [preparo] = await listar("tipos-aba");
+    const conservacao = (await enviar("POST", "tipos-aba", { titulo: "Conservação" })).json();
+    const carnes = (await enviar("POST", "modelos", { nome: "Carnes", abas: [conservacao.id, "nao-existe", preparo.id, conservacao.id] })).json();
+    expect(carnes).toMatchObject({ padrao: true, abas: [conservacao.id, preparo.id] });
+
+    const bebidas = (await enviar("POST", "modelos", { nome: "Bebidas", padrao: true, abas: [preparo.id] })).json();
+    expect(bebidas.padrao).toBe(true);
+    const lista = await listar("modelos");
+    expect(lista.filter((m: { padrao: boolean }) => m.padrao).map((m: { nome: string }) => m.nome)).toEqual(["Bebidas"]);
+
+    // Excluir o padrão passa o padrão para o mais antigo.
+    expect((await enviar("DELETE", `modelos/${bebidas.id}`)).statusCode).toBe(200);
+    expect((await listar("modelos")).map((m: { nome: string; padrao: boolean }) => [m.nome, m.padrao])).toEqual([["Carnes", true]]);
+  });
+
+  it("a loja recebe o título atual do cadastro; excluir a aba a solta dos produtos e dos modelos", async () => {
+    const [conservacao] = (await listar("tipos-aba")).filter((t: { titulo: string }) => t.titulo === "Conservação");
+    const dados = { resumo: "", descricao: "", conteudoComercial: null, badges: [], abas: [{ tipo: conservacao.id, titulo: "Conservação", conteudo: "<p>0 a 4 °C</p>" }, { titulo: "Avulsa", conteudo: "<p>x</p>" }] };
+    await enviar("PUT", "complementos/p-abas", { dados, skus: ["ABA1"] });
+
+    await enviar("PUT", `tipos-aba/${conservacao.id}`, { ...conservacao, titulo: "Como conservar" });
+    const loja = (await app.inject({ url: `/loja/${CONTA}/complemento/ABA1` })).json();
+    expect(loja.complemento.abas.map((a: { titulo: string }) => a.titulo)).toEqual(["Como conservar", "Avulsa"]);
+
+    expect((await enviar("DELETE", `tipos-aba/${conservacao.id}`)).statusCode).toBe(200);
+    const painel = (await app.inject({ url: "/api/complementos/p-abas", headers: { cookie } })).json();
+    expect(painel.dados.abas[0]).toEqual({ titulo: "Como conservar", conteudo: "<p>0 a 4 °C</p>" });
+    const [carnes] = await listar("modelos");
+    expect(carnes.abas).not.toContain(conservacao.id);
+  });
+});
