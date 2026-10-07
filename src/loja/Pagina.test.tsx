@@ -145,3 +145,44 @@ describe("bloco Badges: limites e ícones", () => {
     expect(el.innerHTML).not.toContain("onload");
   });
 });
+
+describe("Galeria: tamanho padrão definido no template", () => {
+  const galeria = (props: Record<string, unknown>, imagens = ["https://exemplo/1.jpg", "https://exemplo/2.jpg"]) => {
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    raiz = createRoot(container);
+    const template = { root: { props: {} }, content: [{ type: "Galeria", props: { id: "g", ...props } }] } as unknown as TemplateData;
+    act(() => raiz!.render(<Pagina template={template} produto={{ ...produto, moovin: { ...produto.moovin, imagens } }} loja={ligacaoSimulada(1)} />));
+    return container.querySelector<HTMLElement>(".tpl-galeria")!;
+  };
+
+  it("template antigo (só sombra) fica como antes: formato original, cantos de 18 px e miniaturas de 64 px", () => {
+    const g = galeria({ sombra: "sim" });
+    expect(g.style.getPropertyValue("--tpl-galeria-proporcao")).toBe("auto");
+    expect(g.style.getPropertyValue("--tpl-galeria-ajuste")).toBe("cover");
+    expect(g.style.getPropertyValue("--tpl-galeria-cantos")).toBe("18px");
+    expect(g.style.getPropertyValue("--tpl-miniatura-tamanho")).toBe("64px");
+    expect(g.style.getPropertyValue("--tpl-galeria-largura")).toBe("");
+    expect(g.querySelectorAll(".tpl-miniaturas button")).toHaveLength(2);
+  });
+
+  it("formato fixo com a foto inteira: todas as fotos na mesma proporção, com fundo e largura máxima", () => {
+    const g = galeria({ formato: "4/5", encaixe: "inteira", fundo: "#f5efe4", largura: 480, cantos: 0, miniaturas: 80 });
+    expect(g.style.getPropertyValue("--tpl-galeria-proporcao")).toBe("4/5");
+    expect(g.style.getPropertyValue("--tpl-galeria-ajuste")).toBe("contain");
+    expect(g.style.getPropertyValue("--tpl-galeria-fundo")).toBe("#f5efe4");
+    expect(g.style.getPropertyValue("--tpl-galeria-largura")).toBe("480px");
+    expect(g.style.getPropertyValue("--tpl-galeria-cantos")).toBe("0px");
+    expect(g.style.getPropertyValue("--tpl-miniatura-proporcao")).toBe("4/5");
+    expect(g.style.getPropertyValue("--tpl-miniatura-tamanho")).toBe("80px");
+  });
+
+  it("preencher recorta (sem fundo); valores inválidos voltam ao padrão; miniaturas 0 esconde as miniaturas", () => {
+    const g = galeria({ formato: "1/1", encaixe: "preencher", fundo: "#f5efe4", cantos: "x", miniaturas: 0 });
+    expect(g.style.getPropertyValue("--tpl-galeria-ajuste")).toBe("cover");
+    expect(g.style.getPropertyValue("--tpl-galeria-fundo")).toBe("");
+    expect(g.style.getPropertyValue("--tpl-galeria-cantos")).toBe("18px");
+    expect(g.querySelector(".tpl-miniaturas")).toBeNull();
+    expect(galeria({ formato: "9/1" }).style.getPropertyValue("--tpl-galeria-proporcao")).toBe("auto");
+  });
+});
