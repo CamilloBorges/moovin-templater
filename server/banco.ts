@@ -49,8 +49,10 @@ export type DocTipoAba = {
   atualizadoPor: string;
 };
 
-// Modelos de cadastro: a sequência de abas (ids de DocTipoAba) de um tipo de produto. Um é o padrão.
-export type DocModelo = { _id: string; conta: string; nome: string; padrao: boolean; abas: string[]; criadoEm: Date; atualizadoEm: Date; atualizadoPor: string };
+// Modelos de cadastro: a sequência de abas (ids de DocTipoAba) de um tipo de produto.
+// categorias: ids das categorias da Moovin de que o modelo é o padrão (cada categoria em um só modelo).
+// padrao: padrão geral, para as categorias sem modelo (no máximo um). Documentos antigos não têm categorias.
+export type DocModelo = { _id: string; conta: string; nome: string; padrao: boolean; categorias?: string[]; abas: string[]; criadoEm: Date; atualizadoEm: Date; atualizadoPor: string };
 
 // Mapas de cortes: a imagem de um animal (na Moovin) e os cortes marcados nela (número, nome,
 // descrição, detalhes e o contorno da região em fração da imagem). O produto aponta para um corte.

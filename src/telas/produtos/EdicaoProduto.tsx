@@ -7,7 +7,7 @@ import { templatePublicado, type TemplateData } from "../../templater/padrao";
 import { formatarMoeda, paraTemplate, URL_LOJA as LOJA, type Badge, type MapaCortes, type ModeloCadastro, type TipoAba } from "../../templater/produto";
 import { listarMapas } from "../../produtos/mapas";
 import { MapaCorteDoProduto } from "./MapaCorteDoProduto";
-import { aplicarModelo, listarModelos, listarTiposAba, modeloPadrao, obrigatoriasVazias, sincronizarTitulos } from "../../produtos/modelos";
+import { aplicarModelo, listarModelos, listarTiposAba, modeloDaCategoria, obrigatoriasVazias, sincronizarTitulos } from "../../produtos/modelos";
 import { listarBadges } from "../../produtos/badges";
 import { Alternador, Campo, CampoReferencia, Numero, Secao, Texto } from "./campos";
 import { SecoesComplemento } from "./Complemento";
@@ -124,7 +124,9 @@ function FormularioProduto({ original, catalogo, todosBadges, tipos, modelos, ma
   const salvo = original.cadastro;
   // Produto ainda sem Complemento no Templater: já começa com o texto para a IA gerado e com as
   // abas do modelo padrão (aproveitando as que vieram da descrição da Moovin).
-  const padrao = original.migrar ? modeloPadrao(modelos) : null;
+  // O modelo da categoria principal (ou da categoria acima, ou o padrão geral).
+  const escolhido = original.migrar ? modeloDaCategoria(modelos, salvo.categoriaPrincipal?.id, catalogo.categorias) : null;
+  const padrao = escolhido?.modelo ?? null;
   const [produto, setProduto] = useState(() => {
     if (!original.migrar) return salvo;
     const abas = padrao ? aplicarModelo(salvo.complemento.abas, padrao, tipos) : salvo.complemento.abas;
@@ -390,7 +392,8 @@ function FormularioProduto({ original, catalogo, todosBadges, tipos, modelos, ma
             tipos={tipos}
             modelos={modelos}
             errosAbas={errosDasAbas(errosVisiveis)}
-            modeloAplicado={padrao?.nome ?? null}
+            modeloAplicado={escolhido ? { nome: escolhido.modelo.nome, motivo: escolhido.motivo } : null}
+            modeloSugerido={modeloDaCategoria(modelos, produto.categoriaPrincipal?.id, catalogo.categorias)?.modelo.id ?? null}
             aoMudar={(complemento) => alterar({ complemento })}
           />
           <BadgesDoProduto

@@ -4,14 +4,16 @@ import {
   excluirModelo, excluirTipoAba, listarModelos, listarTiposAba, salvarModelo, salvarTipoAba, type DadosModelo, type DadosTipoAba,
 } from "../produtos/modelos";
 import type { ModeloCadastro, TipoAba } from "../templater/produto";
+import { carregarCatalogo, type Categoria } from "../produtos/catalogo";
 import { Campo, Secao, Texto } from "./produtos/campos";
 
 // Cadastro de abas (título, conteúdo modelo, obrigatória e instrução) e modelos de cadastro
-// (a sequência de abas de um tipo de produto). O modelo padrão entra nos produtos que ainda
+// (a sequência de abas de um tipo de produto), cada um padrão de categorias ou subcategorias.
+// O modelo da categoria do produto (ou da categoria acima dela, ou o padrão geral) entra nos produtos que ainda
 // não têm Complemento; nos outros, pelo botão "Aplicar modelo" da tela do produto.
 
 const ABA_VAZIA: DadosTipoAba = { titulo: "", conteudoModelo: "", obrigatoria: false, instrucao: "" };
-const MODELO_VAZIO: DadosModelo = { nome: "", padrao: false, abas: [] };
+const MODELO_VAZIO: DadosModelo = { nome: "", padrao: false, categorias: [], abas: [] };
 
 const mensagem = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -65,7 +67,51 @@ function FormularioAba({ tipo, fechar, salvo }: { tipo: TipoAba | null; fechar: 
   );
 }
 
-function FormularioModelo({ modelo, tipos, fechar, salvo }: { modelo: ModeloCadastro | null; tipos: TipoAba[]; fechar: () => void; salvo: () => void }) {
+// Categorias de que o modelo é o padrão. A categoria que já está em outro modelo passa para este.
+function CategoriasDoModelo({ selecionadas, categorias, modelos, modeloId, aoMudar }: {
+  selecionadas: string[];
+  categorias: Categoria[];
+  modelos: ModeloCadastro[];
+  modeloId?: string;
+  aoMudar: (ids: string[]) => void;
+}) {
+  const caminho = (id: string) => categorias.find((c) => c.id === id)?.caminho ?? "(categoria removida da Moovin)";
+  const donoAtual = (id: string) => modelos.find((m) => m.id !== modeloId && m.categorias.includes(id))?.nome;
+  const disponiveis = categorias.filter((c) => !selecionadas.includes(c.id));
+  return (
+    <div className="campo">
+      <span className="campo-rotulo">Padrão para as categorias</span>
+      <div className="fichas">
+        {selecionadas.map((id) => (
+          <span className="ficha" key={id}>
+            {caminho(id)}
+            <button type="button" title="Tirar a categoria" onClick={() => aoMudar(selecionadas.filter((x) => x !== id))}>×</button>
+          </span>
+        ))}
+        {categorias.length > 0 && (
+          <select className="entrada seletor-adicionar" value="" onChange={(e) => e.target.value && aoMudar([...selecionadas, e.target.value])}>
+            <option value="">+ Categoria ou subcategoria…</option>
+            {disponiveis.map((c) => <option key={c.id} value={c.id}>{c.caminho}{donoAtual(c.id) ? `  (hoje no modelo ${donoAtual(c.id)})` : ""}</option>)}
+          </select>
+        )}
+      </div>
+      <small className="campo-dica">
+        Produto sem Complemento recebe o modelo da categoria principal dele; se ela não tem, o da categoria acima (a subcategoria herda da categoria).
+        Cada categoria fica em um só modelo: escolher aqui tira a categoria do outro.
+      </small>
+      {categorias.length === 0 && <small className="campo-erro">Não foi possível carregar as categorias da Moovin.</small>}
+    </div>
+  );
+}
+
+function FormularioModelo({ modelo, tipos, categorias, modelos, fechar, salvo }: {
+  modelo: ModeloCadastro | null;
+  tipos: TipoAba[];
+  categorias: Categoria[];
+  modelos: ModeloCadastro[];
+  fechar: () => void;
+  salvo: () => void;
+}) {
   const [dados, setDados] = useState<DadosModelo>(modelo ?? MODELO_VAZIO);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
@@ -100,10 +146,17 @@ function FormularioModelo({ modelo, tipos, fechar, salvo }: { modelo: ModeloCada
         <div className="campo">
           <span className="campo-rotulo">Uso</span>
           <label className="campo-check">
-            <input type="checkbox" checked={dados.padrao} onChange={(e) => alterar({ padrao: e.target.checked })} /> Modelo padrão (vem selecionado nos produtos)
+            <input type="checkbox" checked={dados.padrao} onChange={(e) => alterar({ padrao: e.target.checked })} /> Padrão geral (para as categorias sem modelo)
           </label>
         </div>
       </div>
+      <CategoriasDoModelo
+        selecionadas={dados.categorias}
+        categorias={categorias}
+        modelos={modelos}
+        modeloId={modelo?.id}
+        aoMudar={(ids) => alterar({ categorias: ids })}
+      />
       <div className="campo">
         <span className="campo-rotulo">Abas, na ordem da página</span>
         <div className="itens-aba">
@@ -142,6 +195,9 @@ function FormularioModelo({ modelo, tipos, fechar, salvo }: { modelo: ModeloCada
 }
 
 export function AbasModelos() {
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  useEffect(() => { carregarCatalogo().then((c) => setCategorias(c.categorias), () => setCategorias([])); }, []);
+  const caminho = (id: string) => categorias.find((c) => c.id === id)?.caminho ?? "(categoria removida da Moovin)";
   const [tipos, setTipos] = useState<TipoAba[] | null>(null);
   const [modelos, setModelos] = useState<ModeloCadastro[] | null>(null);
   const [erro, setErro] = useState("");
@@ -168,7 +224,7 @@ export function AbasModelos() {
     window.confirm(`Excluir a aba "${t.titulo}"? Ela sai dos modelos; nos produtos que a usam, fica como aba avulsa, com o conteúdo de cada um.`) &&
     executar(() => excluirTipoAba(t.id));
   const excluirModeloConfirmado = (m: ModeloCadastro) =>
-    window.confirm(`Excluir o modelo "${m.nome}"? Os produtos não mudam.${m.padrao ? " Outro modelo passa a ser o padrão." : ""}`) &&
+    window.confirm(`Excluir o modelo "${m.nome}"? Os produtos não mudam; as categorias dele ficam sem modelo${m.padrao ? " e a loja fica sem padrão geral" : ""}.`) &&
     executar(() => excluirModelo(m.id));
 
   return (
@@ -218,19 +274,28 @@ export function AbasModelos() {
             key={modeloEditando === "novo" ? "novo" : modeloEditando.id}
             modelo={modeloEditando === "novo" ? null : modeloEditando}
             tipos={tipos}
+            categorias={categorias}
+            modelos={modelos ?? []}
             fechar={() => setModeloEditando(null)}
             salvo={() => { setModeloEditando(null); carregar(); }}
           />
         )}
 
-        <Secao titulo="Modelos de cadastro" descricao="O modelo padrão entra sozinho nos produtos que ainda não têm Complemento. Nos outros, use “Aplicar modelo” na tela do produto.">
+        <Secao titulo="Modelos de cadastro" descricao="Produto que ainda não tem Complemento recebe o modelo da categoria dele (ou da categoria acima, ou o padrão geral). Nos outros, use “Aplicar modelo” na tela do produto.">
           <table className="tabela-produtos">
-            <thead><tr><th>Modelo</th><th>Abas, na ordem</th><th /></tr></thead>
+            <thead><tr><th>Modelo</th><th>Padrão para</th><th>Abas, na ordem</th><th /></tr></thead>
             <tbody>
-              {!modelos && !erro && <tr><td colSpan={3} className="vazio">Carregando…</td></tr>}
+              {!modelos && !erro && <tr><td colSpan={4} className="vazio">Carregando…</td></tr>}
               {modelos?.map((m) => (
                 <tr key={m.id}>
-                  <td><strong>{m.nome}</strong>{m.padrao && <span className="selo-padrao">padrão</span>}</td>
+                  <td><strong>{m.nome}</strong></td>
+                  <td>
+                    <div className="fichas">
+                      {m.padrao && <span className="selo-padrao">padrão geral</span>}
+                      {m.categorias.map((id) => <span className="ficha ficha-fixa" key={id}>{caminho(id)}</span>)}
+                      {!m.padrao && m.categorias.length === 0 && <span className="vazio">só pelo “Aplicar modelo”</span>}
+                    </div>
+                  </td>
                   <td>
                     <div className="fichas">
                       {m.abas.map((id, i) => <span className="ficha ficha-fixa" key={id}>{i + 1}. {tipos?.find((t) => t.id === id)?.titulo}</span>)}
@@ -238,13 +303,13 @@ export function AbasModelos() {
                     </div>
                   </td>
                   <td className="acoes-linha">
-                    {!m.padrao && <button type="button" className="button button-plain" onClick={() => executar(() => salvarModelo({ nome: m.nome, abas: m.abas, padrao: true }, m.id))}>Tornar padrão</button>}
+                    {!m.padrao && <button type="button" className="button button-plain" onClick={() => executar(() => salvarModelo({ nome: m.nome, abas: m.abas, categorias: m.categorias, padrao: true }, m.id))}>Tornar padrão geral</button>}
                     <button type="button" className="button button-plain" onClick={() => setModeloEditando(m)}>Editar</button>
                     <button type="button" className="button button-plain perigo" onClick={() => excluirModeloConfirmado(m)}>Excluir</button>
                   </td>
                 </tr>
               ))}
-              {modelos?.length === 0 && <tr><td colSpan={3} className="vazio">Nenhum modelo. O primeiro que você criar vira o padrão.</td></tr>}
+              {modelos?.length === 0 && <tr><td colSpan={4} className="vazio">Nenhum modelo. Crie um e escolha as categorias de que ele é o padrão.</td></tr>}
             </tbody>
           </table>
         </Secao>

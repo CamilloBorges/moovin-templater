@@ -1,23 +1,24 @@
 import { useState } from "react";
 import { EditorTexto } from "../../componentes/EditorTexto";
 import { precoPorUnidade, textoUnidade, type Aba, type ComplementoProduto, type ModeloCadastro, type TipoAba, type UnidadeConteudo } from "../../templater/produto";
-import { aplicarModelo, modeloPadrao, novaAba } from "../../produtos/modelos";
+import { aplicarModelo, novaAba } from "../../produtos/modelos";
 import { Campo, Numero, Secao, Texto } from "./campos";
 
 // Resumo, descrição da página, conteúdo da embalagem e abas: o que a Moovin não tem.
 // Gravados no nosso servidor (MongoDB); a página da loja os busca pelo SKU.
 
 // Abas do produto: as do cadastro (título fixo, vindo de "Abas e modelos") e as avulsas (título livre).
-function ListaAbas({ abas, tipos, modelos, erros, aoMudar }: {
+function ListaAbas({ abas, tipos, modelos, modeloSugerido, erros, aoMudar }: {
   abas: Aba[];
   tipos: TipoAba[];
   modelos: ModeloCadastro[];
+  modeloSugerido: string | null; // o modelo da categoria do produto
   erros: Map<number, string>;
   aoMudar: (abas: Aba[]) => void;
 }) {
   // Muda quando a lista muda de forma (ordem, inclusão por modelo), para os editores remontarem com o conteúdo da nova posição.
   const [ordem, setOrdem] = useState(0);
-  const [modeloId, setModeloId] = useState(() => modeloPadrao(modelos)?.id ?? modelos[0]?.id ?? "");
+  const [modeloId, setModeloId] = useState(() => modeloSugerido ?? modelos[0]?.id ?? "");
   const alterar = (i: number, parcial: Partial<Aba>) => aoMudar(abas.map((aba, j) => (j === i ? { ...aba, ...parcial } : aba)));
   const reordenar = (novas: Aba[]) => {
     setOrdem((o) => o + 1);
@@ -41,7 +42,7 @@ function ListaAbas({ abas, tipos, modelos, erros, aoMudar }: {
       {modelos.length > 0 && (
         <div className="aplicar-modelo">
           <select className="entrada" value={modeloId} onChange={(e) => setModeloId(e.target.value)}>
-            {modelos.map((m) => <option key={m.id} value={m.id}>{m.nome}{m.padrao ? " (padrão)" : ""}</option>)}
+            {modelos.map((m) => <option key={m.id} value={m.id}>{m.nome}{m.id === modeloSugerido ? " (desta categoria)" : ""}</option>)}
           </select>
           <button type="button" className="button button-secondary" disabled={!modelo} title="Acrescenta as abas do modelo que faltam e põe na ordem do modelo, sem apagar o que já foi escrito"
             onClick={() => modelo && reordenar(aplicarModelo(abas, modelo, tipos))}>
@@ -84,14 +85,15 @@ function ListaAbas({ abas, tipos, modelos, erros, aoMudar }: {
   );
 }
 
-export function SecoesComplemento({ complemento, preco, migrar, tipos, modelos, errosAbas, modeloAplicado, aoMudar }: {
+export function SecoesComplemento({ complemento, preco, migrar, tipos, modelos, errosAbas, modeloAplicado, modeloSugerido, aoMudar }: {
   complemento: ComplementoProduto;
   preco: number;
   migrar: boolean;
   tipos: TipoAba[];
   modelos: ModeloCadastro[];
   errosAbas: Map<number, string>;
-  modeloAplicado: string | null; // nome do modelo padrão aplicado ao abrir um produto sem Complemento
+  modeloAplicado: { nome: string; motivo: string } | null; // modelo aplicado ao abrir um produto sem Complemento
+  modeloSugerido: string | null; // id do modelo da categoria do produto, pré-selecionado no "Aplicar modelo"
   aoMudar: (c: ComplementoProduto) => void;
 }) {
   const alterar = (parcial: Partial<ComplementoProduto>) => aoMudar({ ...complemento, ...parcial });
@@ -160,8 +162,8 @@ export function SecoesComplemento({ complemento, preco, migrar, tipos, modelos, 
         titulo="Abas da página"
         descricao="Quantas abas forem necessárias, na ordem em que devem aparecer. O template define onde elas ficam e o visual."
       >
-        {modeloAplicado && <p className="aviso">Produto novo no Templater: as abas do modelo padrão "{modeloAplicado}" já foram incluídas. Confira antes de salvar.</p>}
-        <ListaAbas abas={complemento.abas} tipos={tipos} modelos={modelos} erros={errosAbas} aoMudar={(abas) => alterar({ abas })} />
+        {modeloAplicado && <p className="aviso">Produto novo no Templater: as abas do modelo "{modeloAplicado.nome}" ({modeloAplicado.motivo}) já foram incluídas. Confira antes de salvar.</p>}
+        <ListaAbas abas={complemento.abas} tipos={tipos} modelos={modelos} modeloSugerido={modeloSugerido} erros={errosAbas} aoMudar={(abas) => alterar({ abas })} />
       </Secao>
 
     </>
