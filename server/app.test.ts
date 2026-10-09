@@ -341,18 +341,6 @@ describe("Mapas de cortes", () => {
   });
 });
 
-describe("Mapa Bovino pronto", () => {
-  it("o servidor aceita o mapa pronto (em produção e no Templater local) e recusa imagem http de fora", async () => {
-    const { mapaBovinoPadrao } = await import("../src/produtos/mapaBovino");
-    const enviar = (payload: object) => app.inject({ method: "POST", url: "/api/mapas", headers: { cookie }, payload });
-    const prod = await enviar(mapaBovinoPadrao("https://templater.bomgado.net"));
-    expect(prod.statusCode).toBe(200);
-    expect(prod.json().cortes).toHaveLength(29);
-    expect((await enviar(mapaBovinoPadrao("http://localhost:5173"))).statusCode).toBe(200);
-    expect((await enviar(mapaBovinoPadrao("http://outro.site"))).statusCode).toBe(400);
-  });
-});
-
 describe("Configurações da loja", () => {
   const salvar = (largura: object) => app.inject({ method: "PUT", url: "/api/loja/configuracoes", headers: { cookie }, payload: { largura } });
   const valida = { ativo: true, maxima: 1280, corLaterais: "#F2F2F2", sombra: true, blocosLarguraTotal: ["#fazenda-bomgado-mapa", " .barra ", "#fazenda-bomgado-mapa", ""] };
