@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ajustesScriptGlobal, analisarScripts, maxAge, novoScript, novoScriptGlobal, urlDoScript, urlDoScriptGlobal, type ScriptMoovin } from "./implantacao";
+import { ajustesScriptGlobal, analisarScripts, maxAge, novoScript, novoScriptGlobal, restritoAUmaPagina, urlDoScript, urlDoScriptGlobal, type ScriptMoovin } from "./implantacao";
 
 const URL = urlDoScript("https://templater.bomgado.net", "conta-1");
 const script = (s: Partial<ScriptMoovin>): ScriptMoovin => ({
@@ -24,9 +24,12 @@ describe("analisarScripts", () => {
 });
 
 describe("novoScript", () => {
-  it("usa a página do script antigo; sem ele, todas", () => {
-    expect(novoScript(URL, [script({ page: "PRODUCT" })])).toMatchObject({ type: "URL", url: URL, page: "PRODUCT", loadPosition: "FOOTER", loadMethod: "DEFER", active: true });
-    expect(novoScript(URL, []).page).toBe("ALL");
+  it("cadastra sempre em todas as páginas (a loja troca de página sem recarregar)", () => {
+    expect(novoScript(URL)).toMatchObject({ type: "URL", url: URL, page: "ALL", loadPosition: "FOOTER", loadMethod: "DEFER", active: true });
+  });
+  it("aponta o script restrito a uma página", () => {
+    expect(restritoAUmaPagina(script({ page: "PRODUCT" }))).toBe(true);
+    expect(restritoAUmaPagina(script({ page: "ALL" }))).toBe(false);
   });
 });
 
