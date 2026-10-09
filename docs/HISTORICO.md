@@ -373,6 +373,13 @@ Ainda não há backend, API de templates nem renderizador da loja.
 - **Template padrão:** sai o bloco "Quantidade e preço por kg" (agora é parte da linha de compra). No template já publicado, o bloco precisa ser removido na Aparência para não repetir o preço por kg.
 - **Testes:** 126 no Vitest (quantidade comercial, total e barra) e 160 no Playwright (20 aparelhos), incluindo a barra numa linha só e centralizada no computador. O teste pegou o total saindo do cartão no cenário extremo (preço de R$ 12.345,67 em fonte 40 num celular de 320 px), corrigido deixando o total descer.
 
+## Correção — fotos da galeria em baixa resolução (09/10/2026)
+
+- **Bug relatado pelo Camillo (ossobuco) e pelo Gustavo em 07/10 (fotos de localização do corte, de fundo azul):** da segunda foto em diante, a galeria do Templater mostrava a imagem borrada, embora o cadastro estivesse certo.
+- **Causa (conferida no shoptest):** a galeria nativa da Moovin só traz a primeira foto inteira (`product image`); as outras existem só como miniatura, com o redimensionamento no endereço (`&ims=fit-in/80x80/filters:fill(FFF)`). O Templater lia as imagens da galeria nativa e usava esse endereço: uma foto de 80×80 ampliada.
+- **Correção:** `imagemOriginal` tira o parâmetro `ims` do endereço (mantém a versão `v=`), e o armazenamento da Moovin devolve a foto original. Na segunda foto do ossobuco: 1080×1350, em vez de 80×80.
+- **Testes:** 129 (endereço da foto original e extração da galeria só com miniaturas).
+
 ## Próximos passos
 
 1. **Implantar (Camillo):** serviço Compose no EasyPanel a partir deste repositório e domínio **`templater.bomgado.net`** pelo túnel da Cloudflare apontando para `app:3001`. **Decisão de 06/10:** sem Cloudflare Access; o painel fica protegido só pelo login da Moovin. O caminho `/loja/*` precisa ficar **público** (sem Cloudflare Access), porque a loja o carrega no navegador do cliente.
