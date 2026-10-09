@@ -331,3 +331,10 @@ button.badge-opcao { font: inherit; }
 .linha-mapa-corte { align-items: flex-start; }
 .campos-mapa-corte { flex: 1 1 360px; display: flex; flex-direction: column; gap: 12px; }
 .previa-mapa-corte { flex: 0 1 260px; display: flex; flex-direction: column; gap: 6px; }
+
+/* Configurações da loja: esquema da largura do site numa tela de 1920 px */
+.esquema-largura { position: relative; height: 90px; border: 1px solid #d8dde3; border-radius: 6px; display: flex; justify-content: center; padding-top: 10px; margin-top: 12px; max-width: 480px; }
+.esquema-largura .esquema-site { background: #fff; border: 1px dashed #9aa5b1; display: flex; align-items: center; justify-content: center; height: 56px; font-size: 12px; color: #4a5562; }
+.esquema-largura .esquema-site.com-sombra { box-shadow: 0 0 10px rgba(0, 0, 0, .12); }
+.esquema-largura small { position: absolute; bottom: 4px; right: 8px; font-size: 11px; color: #6b7682; }
+.titulo-grupo-implantacao { font-size: 15px; margin: 28px 0 8px; color: #33404d; }

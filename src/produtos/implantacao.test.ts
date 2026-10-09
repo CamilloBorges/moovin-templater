@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { analisarScripts, maxAge, novoScript, urlDoScript, type ScriptMoovin } from "./implantacao";
+import { ajustesScriptGlobal, analisarScripts, maxAge, novoScript, novoScriptGlobal, urlDoScript, urlDoScriptGlobal, type ScriptMoovin } from "./implantacao";
 
 const URL = urlDoScript("https://templater.bomgado.net", "conta-1");
 const script = (s: Partial<ScriptMoovin>): ScriptMoovin => ({
@@ -34,5 +34,22 @@ describe("maxAge", () => {
   it("lê o max-age do Cache-Control", () => {
     expect(maxAge("public, max-age=14400")).toBe(14400);
     expect(maxAge(null)).toBeNull();
+  });
+});
+
+describe("script global", () => {
+  const URL_GLOBAL = urlDoScriptGlobal("https://templater.bomgado.net", "conta-1");
+  it("acha o script global pela URL, separado do script da página de produto", () => {
+    const r = analisarScripts([script({ id: "t", type: "URL", url: URL }), script({ id: "g", type: "URL", url: `${URL_GLOBAL}?v=1` })], URL, URL_GLOBAL);
+    expect(r.templater?.id).toBe("t");
+    expect(r.global?.id).toBe("g");
+    expect(analisarScripts([script({ id: "t", type: "URL", url: URL })], URL).global).toBeNull();
+  });
+  it("cadastra em todas as páginas, no cabeçalho e sem defer", () => {
+    expect(novoScriptGlobal(URL_GLOBAL)).toMatchObject({ type: "URL", url: URL_GLOBAL, page: "ALL", loadPosition: "HEAD", loadMethod: "DEFAULT", active: true });
+  });
+  it("aponta cadastro fora do recomendado", () => {
+    expect(ajustesScriptGlobal(script({ type: "URL", page: "ALL", loadPosition: "HEAD", loadMethod: "DEFAULT" }))).toEqual([]);
+    expect(ajustesScriptGlobal(script({ type: "URL", page: "PRODUCT", loadPosition: "FOOTER", loadMethod: "DEFER" }))).toHaveLength(3);
   });
 });

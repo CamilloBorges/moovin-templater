@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import type { Sessao } from "../api";
 import { carregarProduto } from "../produtos/moovin";
 import {
-  analisarScripts, ativarScript, cadastrarScript, carregarResumo, listarScripts, maxAge, NOME_SCRIPT, novoScript, urlDoScript, verificarPagina,
-  type Resumo, type ScriptMoovin,
+  ajustesScriptGlobal, analisarScripts, ativarScript, cadastrarScript, carregarResumo, listarScripts, maxAge, NOME_SCRIPT, NOME_SCRIPT_GLOBAL, novoScript,
+  novoScriptGlobal, urlDoScript, urlDoScriptGlobal, verificarPagina, type Resumo, type ScriptMoovin,
 } from "../produtos/implantacao";
 
 // Tutorial de implantação: o que precisa estar pronto para a página de produto da loja usar o
@@ -38,11 +38,15 @@ function Copiar({ texto }: { texto: string }) {
 }
 
 type Script = { status: number; temTemplate: boolean; maxAge: number | null } | { erro: string };
-type Pagina = { url: string; status: number; carregaTemplater: boolean; carregaV3: boolean } | { erro: string };
+type Pagina = { url: string; status: number; carregaTemplater: boolean; carregaGlobal: boolean; carregaV3: boolean } | { erro: string };
+type ScriptGlobal = { status: number; temEstilo: boolean } | { erro: string };
 
 export function Implantacao({ sessao }: { sessao: Sessao }) {
   const conta = sessao.conta!;
   const url = urlDoScript(location.origin, conta.id);
+  const urlGlobal = urlDoScriptGlobal(location.origin, conta.id);
+  const [scriptGlobal, setScriptGlobal] = useState<ScriptGlobal | null>(null);
+  const [home, setHome] = useState<Pagina | null>(null);
   const [resumo, setResumo] = useState<Resumo | null>(null);
   const [script, setScript] = useState<Script | null>(null);
   const [scripts, setScripts] = useState<ScriptMoovin[] | { erro: string } | null>(null);
@@ -61,6 +65,28 @@ export function Implantacao({ sessao }: { sessao: Sessao }) {
       setScript({ erro: e instanceof Error ? e.message : String(e) });
     }
   }, [url]);
+
+  // Script global: responde e, com alguma configuração ativa, já leva o estilo.
+  const verificarScriptGlobal = useCallback(async () => {
+    setScriptGlobal(null);
+    try {
+      const r = await fetch(urlGlobal, { cache: "no-store" });
+      const corpo = await r.text();
+      setScriptGlobal({ status: r.status, temEstilo: corpo.includes("templater-bomgado-global") });
+    } catch (e) {
+      setScriptGlobal({ erro: e instanceof Error ? e.message : String(e) });
+    }
+  }, [urlGlobal]);
+
+  // O script global vale em todas as páginas: a conferência é na página inicial da loja.
+  const verificarHome = useCallback(async () => {
+    setHome(null);
+    try {
+      setHome(await verificarPagina("/"));
+    } catch (e) {
+      setHome({ erro: e instanceof Error ? e.message : String(e) });
+    }
+  }, []);
 
   const verificarScripts = useCallback(() => {
     setScripts(null);
@@ -88,10 +114,13 @@ export function Implantacao({ sessao }: { sessao: Sessao }) {
     }, () => setResumo(null));
     verificarScript();
     verificarScripts();
-  }, [verificarScript, verificarScripts, verificarNaLoja]);
+    verificarScriptGlobal();
+    verificarHome();
+  }, [verificarScript, verificarScripts, verificarNaLoja, verificarScriptGlobal, verificarHome]);
 
   const lista = Array.isArray(scripts) ? scripts : [];
-  const { templater, antigos } = analisarScripts(lista, url);
+  const { templater, global, antigos } = analisarScripts(lista, url, urlGlobal);
+  const ajustesGlobal = global ? ajustesScriptGlobal(global) : [];
   const antigosAtivos = antigos.filter((s) => s.active);
 
   async function executar(descricao: string, confirmacao: string, fazer: () => Promise<unknown>) {
@@ -115,22 +144,26 @@ export function Implantacao({ sessao }: { sessao: Sessao }) {
   const e5: Estado = !scripts ? "verificando" : "erro" in scripts ? "erro" : templater?.active ? "ok" : templater ? "aviso" : "erro";
   const e6: Estado = !pagina ? (caminho ? "verificando" : "aguardando") : "erro" in pagina || pagina.status !== 200 ? "erro" : pagina.carregaTemplater ? "ok" : "erro";
   const e8: Estado = !scripts ? "verificando" : antigosAtivos.length ? "aviso" : "ok";
-  const prontos = [e2, e3, e4, e5, e6].filter((e) => e === "ok").length + 1;
+  const e9: Estado = !resumo ? "verificando" : resumo.larguraMaxima ? "ok" : "aviso";
+  const e10: Estado = !scriptGlobal ? "verificando" : "erro" in scriptGlobal || scriptGlobal.status !== 200 ? "erro" : "ok";
+  const e11: Estado = !scripts ? "verificando" : "erro" in scripts ? "erro" : global?.active ? (ajustesGlobal.length ? "aviso" : "ok") : global ? "aviso" : "erro";
+  const e12: Estado = !home ? "verificando" : "erro" in home || home.status !== 200 ? "erro" : home.carregaGlobal ? "ok" : "erro";
+  const prontos = [e2, e3, e4, e5, e6, e10, e11, e12].filter((e) => e === "ok").length + 1;
 
   return (
     <>
       <header className="topbar">
-        <div className="breadcrumbs"><strong>Implantação</strong><span>{prontos} de 6 verificações prontas</span></div>
+        <div className="breadcrumbs"><strong>Implantação</strong><span>{prontos} de 9 verificações prontas</span></div>
         <div className="heading-actions">
-          <button className="button button-secondary" onClick={() => { verificarScript(); verificarScripts(); verificarNaLoja(caminho); carregarResumo().then(setResumo); }}>
+          <button className="button button-secondary" onClick={() => { verificarScript(); verificarScripts(); verificarNaLoja(caminho); verificarScriptGlobal(); verificarHome(); carregarResumo().then(setResumo); }}>
             Verificar tudo de novo
           </button>
         </div>
       </header>
       <div className="pagina-produto implantacao">
         <p className="campo-dica">
-          Passo a passo para a página de produto da loja passar a usar o Templater. Os passos se verificam sozinhos; os botões que mexem na
-          Moovin pedem confirmação antes.
+          Passo a passo para a loja passar a usar o Templater: a página de produto (passos 1 a 8) e as configurações que valem no site inteiro
+          (passos 9 a 12). Os passos se verificam sozinhos; os botões que mexem na Moovin pedem confirmação antes.
         </p>
         {erroAcao && <p className="caixa-erros">{erroAcao}</p>}
         {acao && <p className="aviso">{acao}…</p>}
@@ -264,6 +297,88 @@ export function Implantacao({ sessao }: { sessao: Sessao }) {
           ) : (
             <p>Nenhum script antigo de página de produto ativo.</p>
           )}
+        </Passo>
+
+        <h2 className="titulo-grupo-implantacao">Configurações da loja (todas as páginas)</h2>
+
+        <Passo numero={9} titulo="Configurações da loja" estado={e9}>
+          {resumo?.larguraMaxima ? (
+            <p>O site está limitado a <strong>{resumo.larguraMaxima} px</strong> no desktop. Ajuste em <a href="#/loja">Configurações da loja</a>.</p>
+          ) : (
+            <p>Nenhuma configuração global ativa. O script global pode ser cadastrado mesmo assim: ele não muda nada até você ativar algo em <a href="#/loja">Configurações da loja</a> (ex.: limitar o site a 1280 px).</p>
+          )}
+        </Passo>
+
+        <Passo numero={10} titulo="Script global respondendo no Templater" estado={e10}>
+          <p>Endereço do script global, que vale em todas as páginas da loja:</p>
+          <Copiar texto={urlGlobal} />
+          {!scriptGlobal ? null : "erro" in scriptGlobal ? (
+            <p>Não foi possível abrir o script: {scriptGlobal.erro}</p>
+          ) : scriptGlobal.status !== 200 ? (
+            <p>O script respondeu {scriptGlobal.status}.</p>
+          ) : scriptGlobal.temEstilo ? (
+            <p>O script está no ar e já leva as configurações ativas.</p>
+          ) : (
+            <p>O script está no ar, ainda sem configuração ativa (não muda nada na loja).</p>
+          )}
+          <button type="button" className="button button-plain" onClick={verificarScriptGlobal}>Verificar de novo</button>
+        </Passo>
+
+        <Passo numero={11} titulo="Script global cadastrado na Moovin" estado={e11}>
+          {!scripts ? null : "erro" in scripts ? (
+            <p>Não foi possível ler os scripts da Moovin: {scripts.erro}</p>
+          ) : global ? (
+            <>
+              <p>
+                Cadastrado como <strong>{global.name}</strong> ({global.loadPosition === "HEAD" ? "cabeçalho" : "rodapé"}, {global.page === "ALL" ? "todas as páginas" : `página ${global.page}`})
+                {global.active ? " e ativo." : <>, mas <strong>inativo</strong>.</>}
+              </p>
+              {ajustesGlobal.length > 0 && (
+                <div className="aviso">
+                  O cadastro {ajustesGlobal.join("; ")}. Corrija no painel da Moovin (Configurações › Scripts), para o estilo valer no site inteiro sem a página “pular” ao carregar.
+                </div>
+              )}
+              {!global.active && (
+                <button type="button" className="button button-primary" disabled={!!acao}
+                  onClick={() => executar("Ativando o script global", "Ativar o script global do Templater na loja? As configurações ativas passam a valer em todas as páginas.", () => ativarScript(global.id, true))}>
+                  Ativar o script global
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              <p>O script global ainda não está cadastrado na Moovin. Dá para cadastrar daqui ou fazer à mão:</p>
+              <button type="button" className="button button-primary" disabled={!!acao}
+                onClick={() => executar("Cadastrando o script global", `Cadastrar o script "${NOME_SCRIPT_GLOBAL}" na Moovin, ativo, em todas as páginas? As configurações ativas em Configurações da loja passam a valer no site inteiro.`, () => cadastrarScript(novoScriptGlobal(urlGlobal)))}>
+                Cadastrar na Moovin automaticamente
+              </button>
+              <details className="manual">
+                <summary>Fazer à mão no painel da Moovin</summary>
+                <ol>
+                  <li>No painel da Moovin, abra <strong>Configurações › Scripts</strong> e clique em <strong>Novo script</strong>.</li>
+                  <li>Nome: <strong>{NOME_SCRIPT_GLOBAL}</strong>.</li>
+                  <li>Tipo: <strong>URL</strong>; método de carregamento: <strong>Padrão</strong> (sem defer nem async); cole a URL do passo 10.</li>
+                  <li>Posição: <strong>Cabeçalho</strong>. Página: <strong>Todas</strong>.</li>
+                  <li>Deixe <strong>ativo</strong>, salve e volte aqui para verificar.</li>
+                </ol>
+              </details>
+            </>
+          )}
+          <button type="button" className="button button-plain" onClick={verificarScripts}>Verificar de novo</button>
+        </Passo>
+
+        <Passo numero={12} titulo="Script global carregando na loja" estado={e12}>
+          <p>O Templater abre a página inicial da loja ({resumo?.lojaUrl ?? "…"}) e procura o script global.</p>
+          {home && ("erro" in home ? (
+            <p>{home.erro}</p>
+          ) : home.status !== 200 ? (
+            <p>A página inicial respondeu {home.status}.</p>
+          ) : home.carregaGlobal ? (
+            <p>A página inicial carrega o script global. <a href={home.url} target="_blank" rel="noreferrer">Abrir a loja</a> e conferir no computador.</p>
+          ) : (
+            <p>A página inicial ainda não carrega o script global. Se ele acabou de ser cadastrado (passo 11), a Moovin pode levar alguns minutos para atualizar a loja.</p>
+          ))}
+          <button type="button" className="button button-plain" onClick={verificarHome}>Verificar de novo</button>
         </Passo>
       </div>
     </>
