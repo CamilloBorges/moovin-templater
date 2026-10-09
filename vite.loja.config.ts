@@ -5,6 +5,7 @@ import react from "@vitejs/plugin-react";
 // O servidor o entrega em /loja/<conta>/produto.js, junto com o template publicado.
 export default defineConfig({
   plugins: [react()],
+  publicDir: false, // as imagens de public/ são do painel, não do script da loja
   define: { "process.env.NODE_ENV": JSON.stringify("production") },
   build: {
     outDir: "dist-loja",

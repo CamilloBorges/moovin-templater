@@ -9,7 +9,8 @@ import { exigirSessao } from "./sessao";
 const publico = (m: DocMapa) => ({ id: m._id, nome: m.nome, imagem: m.imagem, largura: m.largura, altura: m.altura, cortes: m.cortes });
 
 const texto = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
-const URL_IMAGEM = /^https:\/\/\S+$/i;
+// HTTPS; em desenvolvimento, também a imagem do próprio Templater local (o Mapa Bovino padrão).
+const URL_IMAGEM = /^(https:\/\/|http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/)\S+$/i;
 
 type CamposMapa = Pick<DocMapa, "nome" | "imagem" | "largura" | "altura" | "cortes">;
 

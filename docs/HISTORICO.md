@@ -329,6 +329,23 @@ Ainda não há backend, API de templates nem renderizador da loja.
 - **Produto:** o aviso diz qual modelo entrou e por quê (ex.: "padrão de Carnes, acima da categoria do produto"); o "Aplicar modelo" já vem com o modelo da categoria selecionado.
 - **Testes:** 105 (2 novos da regra de herança, mais o de exclusividade no servidor). Telas conferidas com o Playwright e categorias simuladas: subcategoria com modelo próprio e herança da categoria.
 
+## Fase 19 — Mapa Bovino pronto (07/10/2026)
+
+- **Pedido do Camillo:** incluir o primeiro mapa automaticamente, com o boi baseado no pôster da Angus, **mocho e bem gordo**, sem nomes dentro do boi e só com os pontilhados de separação; todos os cortes só com o título.
+- **Primeiro tentei limpar o pôster** (tirar letras e números por componentes de pixel, por limiar e por máscaras). As letras encostam nos pontilhados e as hachuras confundem a separação; não ficou limpo. **O Camillo pediu para desenhar um boi novo.**
+- **Desenho próprio** (`ferramentas/desenho-bovino.py`, Python com OpenCV e Pillow):
+  - contorno, pernas, orelha horizontal (mocho), rabo e pontilhados definidos por pontos e suavizados (Catmull-Rom);
+  - estilo da arte do Armazém: corpo azul-marinho, traço claro e fundo transparente;
+  - imagem de 1539 × 916, recortada rente ao desenho.
+- **Contornos dos cortes calculados pelas mesmas linhas do desenho** (segmentação das regiões entre os pontilhados): batem exatamente com o desenho. Os pontilhados terminam no cruzamento com a linha vizinha, sem sobras.
+- **29 cortes**, numerados pela legenda do pôster (1 a 28) mais o Pescoço (29). Cortes sem região própria no desenho:
+  - Porterhouse e T-bone: filé mignon com contrafilé;
+  - Prime rib e Capa de entrecot: filé de costela;
+  - Short ribs: acém;
+  - Costela em tiras: as duas costelas.
+- **No painel:** botão "Criar o mapa Bovino pronto" em Mapas de cortes, que aparece enquanto não existe um mapa chamado Bovino. A imagem é servida pelo próprio Templater (`/mapas/bovino.png`); o servidor aceita esse endereço também no Templater local (localhost).
+- **Testes:** 105 (dados do mapa pronto e aceitação pelo servidor). Cards conferidos com o Playwright (Ossobuco, Picanha e Acém).
+
 ## Próximos passos
 
 1. **Implantar (Camillo):** serviço Compose no EasyPanel a partir deste repositório e domínio **`templater.bomgado.net`** pelo túnel da Cloudflare apontando para `app:3001`. **Decisão de 06/10:** sem Cloudflare Access; o painel fica protegido só pelo login da Moovin. O caminho `/loja/*` precisa ficar **público** (sem Cloudflare Access), porque a loja o carrega no navegador do cliente.
