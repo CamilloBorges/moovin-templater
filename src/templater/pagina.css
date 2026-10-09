@@ -34,20 +34,31 @@
 /* Preço, quantidade e comprar: estilos escolhidos no editor chegam por variáveis CSS */
 .tpl-compra-caixa { container-type: inline-size; }
 .tpl-compra, .tpl-barra-fixa { display: flex; align-items: center; gap: 12px 14px; }
-.tpl-compra .tpl-preco { margin-right: auto; }
+/* Linha de compra: quantidade e total em cima; COMPRAR e preço por kg embaixo */
+.tpl-compra { flex-direction: column; align-items: stretch; }
+.tpl-compra-linha { display: flex; align-items: center; gap: 10px 14px; }
+.tpl-compra-quantidade { flex-wrap: wrap; justify-content: space-between; }
+/* Sem espaço ao lado da quantidade (preço alto, fonte grande, celular estreito), o total desce e fica à direita */
+.tpl-compra-quantidade .tpl-preco { margin-left: auto; }
+.tpl-compra-botao .tpl-comprar { flex: 1 1 auto; }
+.tpl-compra-unidade { white-space: nowrap; font-weight: 600; font-family: var(--tpl-cprkg-fonte, inherit); color: var(--tpl-cprkg-cor, #675f55); font-size: var(--tpl-cprkg-tamanho, 15px); }
 .tpl-preco { font-family: var(--tpl-preco-fonte, inherit); color: var(--tpl-preco-cor, inherit); font-size: var(--tpl-preco-tamanho, 24px); white-space: nowrap; }
-.tpl-compra.tpl-disposicao-linha { flex-wrap: nowrap; }
-.tpl-compra.tpl-disposicao-empilhado, .tpl-compra.tpl-disposicao-auto { flex-wrap: wrap; }
+/* Tudo numa linha: as duas linhas viram uma só */
+.tpl-compra.tpl-disposicao-linha { flex-direction: row; align-items: center; }
+.tpl-compra.tpl-disposicao-linha .tpl-compra-linha { display: contents; }
+/* Empilhado: o preço por kg sempre embaixo do botão, à direita */
+.tpl-compra.tpl-disposicao-empilhado .tpl-compra-botao { flex-wrap: wrap; justify-content: flex-end; }
 .tpl-compra.tpl-disposicao-empilhado .tpl-comprar { flex: 1 1 100%; }
-/* Automática: com pouca largura (cartão estreito ou celular), o botão desce e ocupa a linha toda */
-@container (max-width: 420px) {
+/* Automática: com pouca largura (cartão estreito ou celular), o preço por kg desce para baixo do botão */
+@container (max-width: 380px) {
+  .tpl-compra.tpl-disposicao-auto .tpl-compra-botao { flex-wrap: wrap; justify-content: flex-end; }
   .tpl-compra.tpl-disposicao-auto .tpl-comprar { flex: 1 1 100%; }
 }
 .tpl-quantidade { display: inline-flex; align-items: center; gap: 12px; padding: 6px 10px; border: 1px solid var(--tpl-borda); border-radius: 10px; background: #fff; color: var(--tpl-qtd-cor, var(--tpl-principal)); font-family: var(--tpl-qtd-fonte, inherit); font-size: var(--tpl-qtd-tamanho, 16px); white-space: nowrap; }
 /* .tpl .tpl-comprar: precisa vencer o ".tpl button { font: inherit; color: inherit }" */
 .tpl .tpl-comprar { min-height: 44px; padding: 12px 28px; border-radius: 12px; background: var(--tpl-botao-cor, var(--tpl-destaque)); color: var(--tpl-botao-texto, var(--tpl-principal)); font-weight: 700;
   font-family: var(--tpl-botao-fonte, inherit); font-size: var(--tpl-botao-tamanho, 15px); white-space: nowrap; cursor: pointer; }
-.tpl-compra .tpl-comprar { flex: 1 1 auto; text-align: center; }
+.tpl-compra .tpl-comprar { text-align: center; }
 .tpl .tpl-botao-contorno .tpl-comprar { background: transparent; border: 2px solid var(--tpl-botao-cor, var(--tpl-destaque)) !important; color: var(--tpl-botao-texto, var(--tpl-botao-cor, var(--tpl-destaque))); }
 .tpl-botao-cantos-retos .tpl-comprar { border-radius: 0; }
 .tpl-botao-cantos-pilula .tpl-comprar { border-radius: 999px; }
@@ -110,6 +121,9 @@
 .tpl-abas-sanfona .tpl-aba-conteudo, .tpl-abas-lista .tpl-aba-conteudo { padding: 0 24px 22px; }
 .tpl-resumo > :last-child { margin-bottom: 0; }
 .tpl-barra-fixa { flex-wrap: wrap; justify-content: center; padding: 12px 20px; border-radius: 12px; background: var(--tpl-barra-fundo, var(--tpl-principal)); color: #fff; }
+/* Na loja, a barra é uma linha só, centralizada: quantidade, total, COMPRAR e preço por kg */
+.tpl-barra-fixa.tpl-fixa { flex-wrap: nowrap; }
+.tpl-barra-fixa .tpl-compra-unidade { color: var(--tpl-cprkg-cor, rgba(255,255,255,.85)); }
 .tpl-barra-fixa small { flex: 0 0 100%; text-align: center; opacity: .7; font-size: 11px; }
 .tpl-barra-fixa .tpl-preco { font-size: var(--tpl-preco-tamanho, 22px); color: var(--tpl-preco-cor, #fff); }
 .tpl-texto { margin: 0; line-height: 1.6; }
@@ -154,6 +168,8 @@ button.tpl-compartilhar { background: #fff; }
   .tpl-abas-painel { padding: 20px 18px; }
   .tpl-aba-conteudo { font-size: var(--tpl-aba-conteudo-tamanho, 15px); }
   .tpl-barra-fixa small { display: none; }
+  /* No celular, a barra quebra em duas linhas se não couber */
+  .tpl-barra-fixa.tpl-fixa { flex-wrap: wrap; gap: 8px 12px; padding: 10px 12px; }
 }
 
 /* Badges: imagem com balão (tooltip) ao passar o mouse ou focar */

@@ -44,9 +44,28 @@ afterEach(() => {
 describe("Pagina (renderizador do script da loja)", () => {
   it("monta o layout padrão com os dados do Moovin e do Complemento", () => {
     const html = renderizar(templatePadrao).textContent ?? "";
-    for (const texto of ["Cubos de Panela", "Unidade de 0,500 kg", "Resumo dos cubos.", "Descrição longa dos cubos.", "Preparo", "Panela de pressão."]) {
+    for (const texto of ["Cubos de Panela", "0,500 kg", "Resumo dos cubos.", "Descrição longa dos cubos.", "Preparo", "Panela de pressão."]) {
       expect(html).toContain(texto);
     }
+  });
+
+  it("linha de compra: a quantidade cresce pelo conteúdo comercial, com o total ao lado e o preço por kg junto do botão", () => {
+    const container = renderizar(templatePadrao);
+    const linha = container.querySelector(".tpl-compra")!;
+    const ler = () => ({
+      quantidade: linha.querySelector(".tpl-quantidade b")!.textContent,
+      total: linha.querySelector(".tpl-compra-quantidade .tpl-preco")!.textContent!.replace(/\s/g, " "),
+      porKg: linha.querySelector(".tpl-compra-botao .tpl-compra-unidade")!.textContent!.replace(/\s/g, " "),
+    });
+    expect(ler()).toEqual({ quantidade: "0,500 kg", total: "R$ 39,90", porKg: "R$ 79,80 / kg" });
+    const mais = linha.querySelector<HTMLButtonElement>("button[aria-label=Aumentar]")!;
+    act(() => mais.click());
+    act(() => mais.click());
+    expect(ler()).toEqual({ quantidade: "1,500 kg", total: "R$ 119,70", porKg: "R$ 79,80 / kg" });
+    // A barra fixa mostra o mesmo, numa linha só: quantidade, total, COMPRAR e preço por kg.
+    const barra = container.querySelector(".tpl-barra-fixa")!;
+    expect(Array.from(barra.children).map((el) => el.className.split(" ")[0])).toEqual(expect.arrayContaining(["tpl-quantidade", "tpl-preco", "tpl-comprar", "tpl-compra-unidade"]));
+    expect(barra.querySelector(".tpl-quantidade b")!.textContent).toBe("1,500 kg");
   });
 
   // Todo bloco do editor precisa existir na loja; senão o bloco some da página publicada.

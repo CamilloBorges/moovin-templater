@@ -48,7 +48,6 @@ export const templatePadrao: TemplateData = {
               sombra: "sim",
               conteudo: [
                 { type: "LinhaCompra", props: { id: "linha-compra" } },
-                { type: "PrecoPorUnidade", props: { id: "preco-unidade" } },
               ],
             },
           },

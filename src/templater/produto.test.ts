@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
-import { precoPorUnidade, textoUnidade } from "./produto";
+import { precoPorUnidade, quantidadeComercial, textoUnidade, unidadesDe } from "./produto";
 
 // Mesma regra do Script_Produto V3: preço da embalagem ÷ conteúdo comercial.
 describe("precoPorUnidade", () => {
@@ -32,5 +32,21 @@ describe("textoUnidade (quantidade comercial abaixo do preço)", () => {
   it("sem quantidade comercial, nada", () => {
     expect(textoUnidade(null)).toBeNull();
     expect(textoUnidade({ quantidade: 0, unidade: "g" })).toBeNull();
+  });
+});
+
+describe("quantidadeComercial", () => {
+  it("multiplica o conteúdo comercial pelas embalagens, em kg/L com 3 casas", () => {
+    const g500 = { quantidade: 500, unidade: "g" as const };
+    expect([1, 2, 3].map((n) => quantidadeComercial(n, g500))).toEqual(["0,500 kg", "1,000 kg", "1,500 kg"]);
+    expect(quantidadeComercial(3, { quantidade: 700, unidade: "g" })).toBe("2,100 kg");
+    expect(quantidadeComercial(2, { quantidade: 1.5, unidade: "l" })).toBe("3,000 L");
+    expect(quantidadeComercial(2, { quantidade: 6, unidade: "un" })).toBe("12 un");
+  });
+  it("sem conteúdo comercial, o número de embalagens", () => {
+    expect(quantidadeComercial(3, null)).toBe("3");
+  });
+  it("lê a quantidade da Moovin, com 1 como mínimo", () => {
+    expect([unidadesDe("3"), unidadesDe(""), unidadesDe("0"), unidadesDe("abc")]).toEqual([3, 1, 1, 1]);
   });
 });
