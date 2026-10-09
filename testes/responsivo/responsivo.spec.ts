@@ -50,7 +50,7 @@ async function problemasDeLayout(page: Page, celular: boolean) {
     }
 
     // 3. Textos importantes não são cortados.
-    for (const el of document.querySelectorAll(".tpl-titulo h1, .tpl-preco, .tpl-comprar, .tpl-unidade, .tpl-precokg")) {
+    for (const el of document.querySelectorAll(".tpl-titulo h1, .tpl-preco, .tpl-comprar, .tpl-unidade, .tpl-precokg, .tpl-compra-unidade, .tpl-quantidade b")) {
       if (visivel(el) && el.scrollWidth > el.clientWidth + 1) problemas.push(`${descrever(el)} cortado (${el.scrollWidth}px de conteúdo em ${el.clientWidth}px)`);
     }
 
@@ -120,7 +120,34 @@ test("comprar e quantidade respondem ao toque/clique", async ({ page }) => {
   await abrir(page, "padrao");
   const linha = page.locator(".tpl-compra");
   await linha.getByRole("button", { name: "Aumentar" }).click();
-  await expect(linha.locator(".tpl-quantidade b")).toHaveText("2");
+  // Conteúdo comercial de 500 g: a quantidade cresce de 0,500 em 0,500 kg, e o total acompanha.
+  await expect(linha.locator(".tpl-quantidade b")).toHaveText("1,000 kg");
+  const total = await linha.locator(".tpl-compra-quantidade .tpl-preco").textContent();
+  expect(total?.replace(/\s/g, " ")).toMatch(/^R\$ [\d.]+,\d{2}$/);
   await linha.locator(".tpl-comprar").click();
   await expect(linha.locator(".tpl-comprar")).toContainText("ADICIONADO");
+});
+
+test("barra fixa: no computador, tudo numa linha só e centralizado", async ({ page }) => {
+  const largura = page.viewportSize()?.width ?? 0;
+  test.skip(largura < 1024, "no celular a barra pode quebrar em duas linhas");
+  await abrir(page, "padrao");
+  // Rola até a linha de compra sair pelo topo (com espaço extra, para páginas curtas).
+  await page.evaluate(() => {
+    document.body.style.paddingBottom = "2000px";
+    const linha = document.querySelector("[data-tpl-compra]")!.getBoundingClientRect();
+    window.scrollTo(0, window.scrollY + linha.bottom + 40);
+  });
+  const barra = page.locator(".tpl-barra-fixa.visivel");
+  await expect(barra).toBeVisible();
+  const caixas = await barra.evaluate((el) => {
+    const b = el.getBoundingClientRect();
+    const itens = Array.from(el.children).filter((c) => (c as HTMLElement).offsetParent !== null).map((c) => c.getBoundingClientRect());
+    return { meio: b.left + b.width / 2, itens: itens.map((r) => ({ topo: r.top + r.height / 2, esq: r.left, dir: r.right })) };
+  });
+  expect(caixas.itens.length).toBeGreaterThanOrEqual(4);
+  const topos = caixas.itens.map((i) => i.topo);
+  expect(Math.max(...topos) - Math.min(...topos)).toBeLessThan(8);
+  const centro = (Math.min(...caixas.itens.map((i) => i.esq)) + Math.max(...caixas.itens.map((i) => i.dir))) / 2;
+  expect(Math.abs(centro - caixas.meio)).toBeLessThan(4);
 });

@@ -37,13 +37,14 @@ const camposCompra: Fields<B.PropsCompra> = {
     type: "select",
     label: "Disposição",
     options: [
-      { label: "Automática (o botão desce quando falta espaço)", value: "auto" },
+      { label: "Automática (duas linhas; o preço por kg desce quando falta espaço)", value: "auto" },
       { label: "Tudo numa linha", value: "linha" },
-      { label: "Empilhado (botão embaixo)", value: "empilhado" },
+      { label: "Empilhado (preço por kg embaixo do botão)", value: "empilhado" },
     ],
   },
-  preco: campoTexto("Preço"),
+  preco: campoTexto("Valor total"),
   quantidade: campoTexto("Quantidade"),
+  precoKg: campoTexto("Preço por kg / L / un"),
   botao: {
     type: "object",
     label: "Botão comprar",
@@ -206,13 +207,13 @@ export const config: Config<ComNome<Blocos>, RaizTemplate> = {
     LinhaCompra: {
       label: "Preço, quantidade e comprar",
       fields: camposCompra,
-      defaultProps: { disposicao: "auto", preco: {}, quantidade: {}, botao: { estilo: "solido", cantos: "arredondados" } },
+      defaultProps: { disposicao: "auto", preco: {}, quantidade: {}, precoKg: {}, botao: { estilo: "solido", cantos: "arredondados" } },
       render: (props) => <B.LinhaCompra {...props} />,
     },
     BarraCompraFixa: {
       label: "Barra de compra fixa",
       fields: { ...camposCompra, corFundo: campoCor("Cor do fundo da barra") },
-      defaultProps: { disposicao: "auto", preco: {}, quantidade: {}, botao: { estilo: "solido", cantos: "arredondados" }, corFundo: "" },
+      defaultProps: { disposicao: "auto", preco: {}, quantidade: {}, precoKg: {}, botao: { estilo: "solido", cantos: "arredondados" }, corFundo: "" },
       render: (props) => <B.BarraCompraFixa {...props} />,
     },
     Resumo: {

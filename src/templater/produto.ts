@@ -143,6 +143,24 @@ export function textoUnidade(conteudo: ComplementoProduto["conteudoComercial"]) 
   return `Unidade de ${valor.toLocaleString("pt-BR", { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${rotulo}`;
 }
 
+// Quantidade escolhida, na unidade comercial: a Moovin conta embalagens; com conteúdo de 500 g,
+// 1, 2 e 3 embalagens aparecem como "0,500 kg", "1,000 kg" e "1,500 kg" (3 casas, como na balança).
+// Sem conteúdo comercial, aparece o número de unidades.
+export function quantidadeComercial(unidades: number, conteudo: ComplementoProduto["conteudoComercial"]) {
+  if (!conteudo || conteudo.quantidade <= 0) return String(unidades);
+  const { quantidade, unidade } = conteudo;
+  if (unidade === "un") return `${(quantidade * unidades).toLocaleString("pt-BR")} un`;
+  const valor = (unidade === "g" || unidade === "ml" ? quantidade / 1000 : quantidade) * unidades;
+  const rotulo = unidade === "g" || unidade === "kg" ? "kg" : "L";
+  return `${valor.toLocaleString("pt-BR", { minimumFractionDigits: 3, maximumFractionDigits: 3 })} ${rotulo}`;
+}
+
+// Número de embalagens a partir da quantidade da Moovin (texto da caixa de quantidade).
+export function unidadesDe(quantidade: string) {
+  const n = Number.parseInt(quantidade, 10);
+  return Number.isFinite(n) && n > 0 ? n : 1;
+}
+
 // Badges do produto, na ordem escolhida, a partir do cadastro completo.
 export function resolverBadges(ids: string[], todos: Badge[]): Badge[] {
   return ids.map((id) => todos.find((b) => b.id === id)).filter((b): b is Badge => !!b);

@@ -63,9 +63,10 @@ function estilizado(variante: string, largura: string, estiloAbas = "abas"): Tem
   const direita = (t.content[0].props as Record<string, any>).direita;
   direita[0].props = { ...direita[0].props, fundo: "cor", corFundo: "#f5efe4", cantos: "retos" };
   const compra = direita[1].props.conteudo[0];
-  compra.props = { ...compra.props, preco: { fonte: "georgia", tamanho: 40 }, quantidade: { tamanho: 20 }, botao: { estilo: "solido", fonte: "verdana", tamanho: 20, cantos: "pilula" } };
-  const unidade = direita[1].props.conteudo[1];
-  unidade.props = { ...unidade.props, unidade: { tamanho: 18 }, precoKg: { tamanho: 22 } };
+  compra.props = {
+    ...compra.props, preco: { fonte: "georgia", tamanho: 40 }, quantidade: { tamanho: 20 }, precoKg: { tamanho: 22 },
+    botao: { estilo: "solido", fonte: "verdana", tamanho: 20, cantos: "pilula" },
+  };
   const badgesBloco = direita[0].props.conteudo.find((b: { type: string }) => b.type === "Badges");
   badgesBloco.props = { ...badgesBloco.props, tamanho: 80, porLinha: 6, maxLinhas: 2 };
   const abas = t.content.find((b) => b.type === "AbasDetalhes")!;

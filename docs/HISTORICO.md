@@ -364,6 +364,15 @@ Ainda não há backend, API de templates nem renderizador da loja.
 - **Causa (reproduzida no shoptest com o Playwright):** o script estava cadastrado na Moovin só para a página "Detalhe do produto". A loja é um app Next.js e troca de página sem recarregar: vindo da home ou da listagem, o script **nem era carregado** (abrindo o produto direto, carregava). Com o script carregado desde a home, o template monta no primeiro clique, em produtos diferentes e na volta.
 - **Correção:** o cadastro pela Implantação passa a usar **todas as páginas** (o renderizador já age só nas páginas de produto). O passo 5 avisa quando o script está restrito a uma página e tem o botão **"Passar para todas as páginas"** (PATCH `page: ALL` na API de scripts da Moovin).
 
+## Fase 21 — Linha de compra: quantidade comercial, total e preço por kg (09/10/2026)
+
+- **Pedido do Camillo:** com quantidade comercial, a quantidade cresce pelo conteúdo da embalagem (0,500 kg → 1,000 kg → 1,500 kg); à direita da quantidade, o valor total; o COMPRAR na linha de baixo, com o preço por kg à direita. A barra fixa faz o mesmo, numa linha só, centralizada.
+- **Conferido no shoptest:** a Moovin conta embalagens (a caixa nativa vai 1, 2, 3) e o preço nativo fica fixo no preço da embalagem. O Templater só **mostra** a quantidade na unidade comercial (`quantidadeComercial`: embalagens × conteúdo, em kg/L com 3 casas, ou em un) e calcula o total (preço × embalagens); o carrinho continua o nativo.
+- **Linha de compra:** em cima, quantidade e total; embaixo, COMPRAR e o preço por kg / L / un (sem conteúdo comercial, a quantidade é o número de unidades e o preço por kg não aparece). Disposição: automática (o preço por kg desce em cartão estreito; o total desce quando não cabe ao lado da quantidade), tudo numa linha ou empilhado. Campo novo de estilo: "Preço por kg / L / un"; o do preço passa a se chamar "Valor total".
+- **Barra fixa:** quantidade, total, COMPRAR e preço por kg numa linha só, centralizada; no celular quebra em duas linhas se não couber.
+- **Template padrão:** sai o bloco "Quantidade e preço por kg" (agora é parte da linha de compra). No template já publicado, o bloco precisa ser removido na Aparência para não repetir o preço por kg.
+- **Testes:** 126 no Vitest (quantidade comercial, total e barra) e 160 no Playwright (20 aparelhos), incluindo a barra numa linha só e centralizada no computador. O teste pegou o total saindo do cartão no cenário extremo (preço de R$ 12.345,67 em fonte 40 num celular de 320 px), corrigido deixando o total descer.
+
 ## Próximos passos
 
 1. **Implantar (Camillo):** serviço Compose no EasyPanel a partir deste repositório e domínio **`templater.bomgado.net`** pelo túnel da Cloudflare apontando para `app:3001`. **Decisão de 06/10:** sem Cloudflare Access; o painel fica protegido só pelo login da Moovin. O caminho `/loja/*` precisa ficar **público** (sem Cloudflare Access), porque a loja o carrega no navegador do cliente.

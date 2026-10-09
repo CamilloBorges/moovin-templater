@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import DOMPurify from "dompurify";
-import { formatarMoeda, precoPorUnidade, type Aba, type Badge, type MapaCorteResolvido, type ProdutoTemplate, textoUnidade } from "./produto";
+import {
+  formatarMoeda, precoPorUnidade, quantidadeComercial, textoUnidade, unidadesDe, type Aba, type Badge, type MapaCorteResolvido, type ProdutoTemplate,
+} from "./produto";
 import { pontosSvg } from "./mapa";
 import { estilo, useFontes, varsTexto, type EstiloTexto } from "./estilo";
 
@@ -287,15 +289,28 @@ export function Titulo({ mostrarCodigo, mostrarAvaliacao, mostrarCompartilhar }:
   );
 }
 
+// Quantidade na unidade comercial (0,500 kg, 1,000 kg…); os botões somam ou tiram uma embalagem.
 function Quantidade() {
   const compra = useCompra();
+  const { conteudoComercial } = useAmbiente().produto.complemento;
   return (
     <span className="tpl-quantidade">
       <button type="button" aria-label="Diminuir" onClick={compra.menos}>−</button>
-      <b>{compra.quantidade}</b>
+      <b aria-live="polite">{quantidadeComercial(unidadesDe(compra.quantidade), conteudoComercial)}</b>
       <button type="button" aria-label="Aumentar" onClick={compra.mais}>+</button>
     </span>
   );
+}
+
+// Total da compra (preço da embalagem × quantidade de embalagens) e preço por kg / L / un.
+function useValores() {
+  const compra = useCompra();
+  const { conteudoComercial } = useAmbiente().produto.complemento;
+  return {
+    compra,
+    total: formatarMoeda(compra.preco * unidadesDe(compra.quantidade)),
+    porUnidade: precoPorUnidade(compra.preco, conteudoComercial),
+  };
 }
 
 export type EstiloBotao = EstiloTexto & {
@@ -305,9 +320,10 @@ export type EstiloBotao = EstiloTexto & {
 };
 
 export type PropsCompra = {
-  preco?: EstiloTexto;
+  preco?: EstiloTexto; // o total da compra
   quantidade?: EstiloTexto;
   botao?: EstiloBotao;
+  precoKg?: EstiloTexto; // preço por kg / L / un, ao lado do botão
   disposicao?: "auto" | "linha" | "empilhado";
 };
 
@@ -318,24 +334,31 @@ function aparenciaCompra(p: PropsCompra) {
     varsTexto("tpl-preco", p.preco),
     varsTexto("tpl-qtd", p.quantidade),
     varsTexto("tpl-botao", b),
+    varsTexto("tpl-cprkg", p.precoKg),
     /^#[0-9a-f]{6}$/i.test(b.corTexto ?? "") ? { "--tpl-botao-texto": b.corTexto! } : {},
   );
   const classes = [`tpl-botao-${b.estilo ?? "solido"}`, `tpl-botao-cantos-${b.cantos ?? "arredondados"}`];
   return { style, classes: classes.join(" ") };
 }
 
+// Duas linhas: quantidade e o total da compra; embaixo, COMPRAR e o preço por kg / L / un.
+// A caixa externa mede a largura disponível (container query): em cartão estreito, o preço por kg
+// desce para baixo do botão. "Tudo numa linha" junta as duas linhas; "Empilhado" sempre desce.
 export function LinhaCompra(props: PropsCompra) {
-  const compra = useCompra();
-  const ref = useFontes(props.preco?.fonte, props.quantidade?.fonte, props.botao?.fonte);
+  const { compra, total, porUnidade } = useValores();
+  const ref = useFontes(props.preco?.fonte, props.quantidade?.fonte, props.botao?.fonte, props.precoKg?.fonte);
   const { style, classes } = aparenciaCompra(props);
-  // A caixa externa mede a largura disponível (container query): em cartão estreito, o botão
-  // desce para a linha de baixo. "linha" e "empilhado" forçam a disposição.
   return (
     <div className="tpl-compra-caixa" ref={ref as React.Ref<HTMLDivElement>}>
       <div className={`tpl-compra tpl-disposicao-${props.disposicao ?? "auto"} ${classes}`} style={style} data-tpl-compra="">
-        <strong className="tpl-preco">{formatarMoeda(compra.preco)}</strong>
-        <Quantidade />
-        <button type="button" className="tpl-comprar" onClick={compra.comprar}>{compra.textoComprar}</button>
+        <div className="tpl-compra-linha tpl-compra-quantidade">
+          <Quantidade />
+          <strong className="tpl-preco" aria-live="polite">{total}</strong>
+        </div>
+        <div className="tpl-compra-linha tpl-compra-botao">
+          <button type="button" className="tpl-comprar" onClick={compra.comprar}>{compra.textoComprar}</button>
+          {porUnidade && <span className="tpl-compra-unidade">{porUnidade}</span>}
+        </div>
       </div>
     </div>
   );
@@ -344,10 +367,10 @@ export function LinhaCompra(props: PropsCompra) {
 // Na loja aparece fixa no rodapé quando a linha de compra sai da tela; no editor, mostra onde fica.
 export function BarraCompraFixa(props: PropsCompra & { corFundo?: string }) {
   const { editando, loja } = useAmbiente();
-  const fontes = useFontes(props.preco?.fonte, props.quantidade?.fonte, props.botao?.fonte);
+  const fontes = useFontes(props.preco?.fonte, props.quantidade?.fonte, props.botao?.fonte, props.precoKg?.fonte);
   const { style, classes } = aparenciaCompra(props);
   if (/^#[0-9a-f]{6}$/i.test(props.corFundo ?? "")) (style as Record<string, string>)["--tpl-barra-fundo"] = props.corFundo!;
-  const compra = useCompra();
+  const { compra, total, porUnidade } = useValores();
   const [visivel, setVisivel] = useState(false);
   const barra = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -366,9 +389,10 @@ export function BarraCompraFixa(props: PropsCompra & { corFundo?: string }) {
       aria-hidden={loja ? !visivel : undefined}
     >
       {editando && <small>Aparece ao rolar, quando a área de compra sai da tela</small>}
-      <strong className="tpl-preco">{formatarMoeda(compra.preco)}</strong>
       <Quantidade />
+      <strong className="tpl-preco">{total}</strong>
       <button type="button" className="tpl-comprar" onClick={compra.comprar}>{compra.textoComprar}</button>
+      {porUnidade && <span className="tpl-compra-unidade">{porUnidade}</span>}
     </div>
   );
 }
