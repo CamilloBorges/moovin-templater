@@ -385,6 +385,15 @@ Ainda não há backend, API de templates nem renderizador da loja.
 - **Decisão do Camillo:** tirar a criação automática do mapa Bovino (botão "Criar o mapa Bovino pronto", `src/produtos/mapaBovino.ts` e `ferramentas/desenho-bovino.py`). Nem o desenho próprio nem a versão com a foto real recortada ficaram bons o bastante; os mapas passam a ser feitos à mão, num editor mais interativo (com zoom), a construir.
 - A imagem `public/mapas/bovino.png` continua no ar, para um mapa já cadastrado com ela não perder a imagem.
 
+## Fase 22 — Editor de mapas com zoom (Konva), por linhas de corte (09/10/2026)
+
+- **Pedido do Camillo:** um editor muito mais interativo e com zoom para traçar as áreas com precisão; escolhido o **Konva** (`konva` + `react-konva`), num modelo **híbrido**: as regiões saem de linhas de corte, mas cada corte pode ser corrigido à mão.
+- **Fluxo em modos:** (1) **Contorno do animal**, ponto a ponto, fechando no primeiro ponto ou com Enter; (2) **Linhas de corte**, concluídas clicando de novo no último ponto ou com Enter, com encaixe nos pontos e linhas próximos; (3) **Regiões dos cortes**: com um corte selecionado, cada clique põe ou tira uma região dele; e o **Ajuste fino do corte**, que arrasta, insere (clicando na borda) e apaga (Delete) os pontos do corte, ou desenha a região à mão.
+- **Regiões (`src/produtos/regioes.ts`):** o contorno é rasterizado numa grade de até 900 células, e as linhas viram barreira. As regiões ligadas são rotuladas, e o contorno de cada corte é traçado na união das regiões dele (simplificado para no máximo 200 pontos). Cada corte guarda os pontos-âncora (`sementes`) e é recalculado sozinho quando o contorno ou as linhas mudam. Se ajustado à mão (`manual`), ele fica como está, até usar "Voltar a seguir as linhas".
+- **Prancheta:** zoom pela roda do mouse (em volta do ponteiro) e pelos botões, "ver o animal inteiro", arrastar a imagem para mover, setas para mover o ponto selecionado (Shift = 10×), Ctrl+Z / Ctrl+Y em todo o editor. A altura acompanha a proporção da imagem.
+- **Servidor:** o mapa passa a guardar `contorno` e `linhas`, e o corte guarda `sementes` e `manual`, todos opcionais e validados. Mapas antigos continuam iguais (só a `regiao` dos cortes) e a loja segue usando só a `regiao`.
+- **Testes:** 133 no Vitest (regiões pelas linhas, união, cortes manuais e validação no servidor). Conferido no navegador com a API simulada: carregar um mapa, juntar regiões, zoom, ajuste à mão, desfazer e salvar, e desenhar do zero. Isso pegou dois problemas, já corrigidos: o Enter não chegava à prancheta (o Konva impede o foco no clique) e o duplo clique do Konva juntava dois cliques rápidos em lugares diferentes.
+
 ## Próximos passos
 
 1. **Implantar (Camillo):** serviço Compose no EasyPanel a partir deste repositório e domínio **`templater.bomgado.net`** pelo túnel da Cloudflare apontando para `app:3001`. **Decisão de 06/10:** sem Cloudflare Access; o painel fica protegido só pelo login da Moovin. O caminho `/loja/*` precisa ficar **público** (sem Cloudflare Access), porque a loja o carrega no navegador do cliente.

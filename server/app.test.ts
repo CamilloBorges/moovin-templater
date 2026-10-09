@@ -339,6 +339,23 @@ describe("Mapas de cortes", () => {
     expect((await enviar("DELETE", `mapas/${mapa.id}`)).statusCode).toBe(200);
     expect((await app.inject({ url: "/api/complementos/p-mapa", headers: { cookie } })).json().dados.mapaCorte).toBeNull();
   });
+
+  it("guarda o contorno do animal, as linhas de corte e as âncoras dos cortes (e recusa pontos inválidos)", async () => {
+    const comLinhas = {
+      ...bovino,
+      contorno: [[0.1, 0.2], [0.9, 0.2], [0.9, 0.8], [0.1, 0.8]],
+      linhas: [{ id: "l1", pontos: [[0.5, 0.1], [0.5, 0.9]] }],
+      cortes: [{ ...bovino.cortes[0], sementes: [[0.3, 0.5]], manual: true }],
+    };
+    const r = await enviar("POST", "mapas", comLinhas);
+    expect(r.statusCode).toBe(200);
+    expect(r.json()).toMatchObject({ contorno: comLinhas.contorno, linhas: comLinhas.linhas, cortes: [{ sementes: [[0.3, 0.5]], manual: true }] });
+    expect((await enviar("POST", "mapas", { ...comLinhas, contorno: [[0.1, 0.2], [0.9, 0.2]] })).statusCode).toBe(400);
+    expect((await enviar("POST", "mapas", { ...comLinhas, linhas: [{ id: "x", pontos: [[0.5, 1.5], [0.5, 0.9]] }] })).statusCode).toBe(400);
+    expect((await enviar("POST", "mapas", { ...comLinhas, cortes: [{ ...bovino.cortes[0], sementes: [[2, 0]] }] })).statusCode).toBe(400);
+    // mapas antigos (sem contorno nem linhas) continuam aceitos e voltam com listas vazias
+    expect((await enviar("POST", "mapas", bovino)).json()).toMatchObject({ contorno: [], linhas: [] });
+  });
 });
 
 describe("Configurações da loja", () => {

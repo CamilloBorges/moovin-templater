@@ -1,18 +1,32 @@
 import type { FastifyInstance } from "fastify";
 import { randomUUID } from "node:crypto";
-import { complementos, mapas, type DocCorte, type DocMapa } from "./banco";
+import { complementos, mapas, type DocCorte, type DocLinha, type DocMapa } from "./banco";
 import { exigirSessao } from "./sessao";
 
 // Cadastro de mapas de cortes (tela "Mapas de cortes" do painel) e o Mapa de Corte que a loja
 // desenha no fim da galeria de cada produto.
 
-const publico = (m: DocMapa) => ({ id: m._id, nome: m.nome, imagem: m.imagem, largura: m.largura, altura: m.altura, cortes: m.cortes });
+const publico = (m: DocMapa) => ({
+  id: m._id, nome: m.nome, imagem: m.imagem, largura: m.largura, altura: m.altura, cortes: m.cortes, contorno: m.contorno ?? [], linhas: m.linhas ?? [],
+});
+
+// Lista de pontos em fração da imagem (0 a 1), com no máximo "max" pontos; null se inválida.
+function listaPontos(v: unknown, max: number): [number, number][] | null {
+  if (v === undefined || v === null) return [];
+  if (!Array.isArray(v) || v.length > max) return null;
+  const saida: [number, number][] = [];
+  for (const p of v) {
+    if (!Array.isArray(p) || p.length !== 2 || !p.every((n) => typeof n === "number" && n >= 0 && n <= 1)) return null;
+    saida.push([Math.round(p[0] * 10000) / 10000, Math.round(p[1] * 10000) / 10000]);
+  }
+  return saida;
+}
 
 const texto = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 // HTTPS; em desenvolvimento, também a imagem do próprio Templater local (o Mapa Bovino padrão).
 const URL_IMAGEM = /^(https:\/\/|http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/)\S+$/i;
 
-type CamposMapa = Pick<DocMapa, "nome" | "imagem" | "largura" | "altura" | "cortes">;
+type CamposMapa = Pick<DocMapa, "nome" | "imagem" | "largura" | "altura" | "cortes" | "contorno" | "linhas">;
 
 function validarCorte(c: unknown, i: number): DocCorte | string {
   const corte = (c ?? {}) as Partial<DocCorte>;
@@ -31,7 +45,12 @@ function validarCorte(c: unknown, i: number): DocCorte | string {
     regiao.push([Math.round(p[0] * 10000) / 10000, Math.round(p[1] * 10000) / 10000]);
   }
   if (regiao.length > 0 && regiao.length < 3) return `Corte "${nome}": o contorno precisa de pelo menos 3 pontos.`;
-  return { id: typeof corte.id === "string" && corte.id ? corte.id : randomUUID(), numero, nome, descricao, detalhes, regiao };
+  const sementes = listaPontos(corte.sementes, 30);
+  if (!sementes) return `Corte "${nome}": pontos-âncora inválidos.`;
+  return {
+    id: typeof corte.id === "string" && corte.id ? corte.id : randomUUID(), numero, nome, descricao, detalhes, regiao,
+    ...(sementes.length ? { sementes } : {}), ...(corte.manual === true ? { manual: true } : {}),
+  };
 }
 
 function validarMapa(corpo: Partial<CamposMapa> | undefined): CamposMapa | string {
@@ -51,7 +70,18 @@ function validarMapa(corpo: Partial<CamposMapa> | undefined): CamposMapa | strin
     if (cortes.some((x) => x.id === corte.id)) corte.id = randomUUID();
     cortes.push(corte);
   }
-  return { nome, imagem, largura, altura, cortes };
+  const contorno = listaPontos(corpo?.contorno, 2000);
+  if (!contorno || (contorno.length > 0 && contorno.length < 3)) return "Contorno do animal inválido (mínimo de 3 pontos, máximo de 2000).";
+  const listaLinhas = Array.isArray(corpo?.linhas) ? corpo.linhas : [];
+  if (listaLinhas.length > 300) return "Linhas de corte demais neste mapa.";
+  const linhas: DocLinha[] = [];
+  for (const l of listaLinhas) {
+    const pts = listaPontos((l as Partial<DocLinha>)?.pontos, 500);
+    if (!pts || pts.length < 2) return "Linha de corte inválida (de 2 a 500 pontos).";
+    const id = typeof (l as Partial<DocLinha>).id === "string" && (l as DocLinha).id ? texto((l as DocLinha).id, 60) : randomUUID();
+    linhas.push({ id: linhas.some((x) => x.id === id) ? randomUUID() : id, pontos: pts });
+  }
+  return { nome, imagem, largura, altura, cortes, contorno, linhas };
 }
 
 // Mapa de Corte do produto para a loja: só o necessário para desenhar a imagem.

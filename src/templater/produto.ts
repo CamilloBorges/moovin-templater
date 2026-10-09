@@ -47,10 +47,27 @@ export type Corte = {
   descricao: string; // texto curto, que vai na imagem do produto
   detalhes: string; // HTML: informações detalhadas do corte
   regiao: Ponto[]; // contorno da região (polígono); vazio = ainda não desenhado
+  // Modelo de linhas de corte (editor do mapa): pontos dentro das regiões que formam o corte. A região
+  // é calculada pelo contorno do animal e pelas linhas; "manual" = contorno ajustado à mão, não recalcula.
+  sementes?: Ponto[];
+  manual?: boolean;
 };
 
-// Mapa de cortes de um animal: a imagem (salva na Moovin) e os cortes marcados nela.
-export type MapaCortes = { id: string; nome: string; imagem: string; largura: number; altura: number; cortes: Corte[] };
+// Linha de corte (separação entre cortes), desenhada sobre o animal.
+export type LinhaCorte = { id: string; pontos: Ponto[] };
+
+// Mapa de cortes de um animal: a imagem (salva na Moovin) e os cortes marcados nela. O contorno do
+// animal e as linhas de corte são opcionais (mapas antigos só têm a região de cada corte).
+export type MapaCortes = {
+  id: string;
+  nome: string;
+  imagem: string;
+  largura: number;
+  altura: number;
+  cortes: Corte[];
+  contorno?: Ponto[];
+  linhas?: LinhaCorte[];
+};
 
 // O que a página precisa para desenhar a imagem do Mapa de Corte do produto.
 export type MapaCorteResolvido = {
