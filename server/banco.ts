@@ -56,8 +56,17 @@ export type DocModelo = { _id: string; conta: string; nome: string; padrao: bool
 
 // Mapas de cortes: a imagem de um animal (na Moovin) e os cortes marcados nela (número, nome,
 // descrição, detalhes e o contorno da região em fração da imagem). O produto aponta para um corte.
-export type DocCorte = { id: string; numero: number; nome: string; descricao: string; detalhes: string; regiao: [number, number][] };
-export type DocMapa = { _id: string; conta: string; nome: string; imagem: string; largura: number; altura: number; cortes: DocCorte[]; atualizadoEm: Date; atualizadoPor: string };
+// Modelo de linhas (editor do mapa): o contorno do animal e as linhas de corte; cada corte guarda os
+// pontos-âncora das regiões que o formam e se o contorno foi ajustado à mão (manual). Tudo opcional.
+export type DocCorte = {
+  id: string; numero: number; nome: string; descricao: string; detalhes: string; regiao: [number, number][];
+  sementes?: [number, number][]; manual?: boolean;
+};
+export type DocLinha = { id: string; pontos: [number, number][] };
+export type DocMapa = {
+  _id: string; conta: string; nome: string; imagem: string; largura: number; altura: number; cortes: DocCorte[];
+  contorno?: [number, number][]; linhas?: DocLinha[]; atualizadoEm: Date; atualizadoPor: string;
+};
 
 // O que a Moovin não tem, por produto: a descrição da página e os dados adicionais (resumo,
 // conteúdo comercial, abas e badges). Os campos padrão (preço, categoria, estoque…) ficam só na Moovin,
