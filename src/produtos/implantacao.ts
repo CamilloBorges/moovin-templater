@@ -28,20 +28,24 @@ export function analisarScripts(lista: ScriptMoovin[], url: string) {
   return { templater, antigos };
 }
 
-// Cadastro do script do Templater: mesma página do script antigo (que já é a de detalhe do
-// produto), senão todas; o script só age nas páginas de produto. No rodapé e com defer, para
-// não atrasar a página.
-export function novoScript(url: string, antigos: ScriptMoovin[]) {
+// Cadastro do script do Templater: sempre em todas as páginas. A Moovin é um app Next.js e troca
+// de página sem recarregar; um script restrito à página de produto só entra quando o produto é
+// aberto direto (vindo da home ou da listagem, a página precisava de um recarregamento). O script
+// só age nas páginas de produto. No rodapé e com defer, para não atrasar a página.
+export function novoScript(url: string) {
   return {
     name: NOME_SCRIPT,
     loadPosition: "FOOTER",
-    page: antigos[0]?.page ?? "ALL",
+    page: "ALL",
     type: "URL",
     loadMethod: "DEFER",
     url,
     active: true,
   };
 }
+
+// Script da página de produto cadastrado só em uma página: não carrega na navegação interna da loja.
+export const restritoAUmaPagina = (s: ScriptMoovin) => s.page !== "ALL";
 
 // Cache do navegador pedido para o script, em segundos (Cache-Control: max-age).
 export function maxAge(cacheControl: string | null) {
@@ -53,5 +57,6 @@ export const carregarResumo = () => api<Resumo>("implantacao/resumo");
 export const listarScripts = () => api<{ items: ScriptMoovin[] }>("moovin/eco-store/script").then((r) => r.items);
 export const cadastrarScript = (corpo: ReturnType<typeof novoScript>) => api<ScriptMoovin>("moovin/eco-store/script", { corpo });
 export const ativarScript = (id: string, active: boolean) => api<ScriptMoovin>(`moovin/eco-store/script/${id}`, { metodo: "PATCH", corpo: { active } });
+export const usarEmTodasAsPaginas = (id: string) => api<ScriptMoovin>(`moovin/eco-store/script/${id}`, { metodo: "PATCH", corpo: { page: "ALL" } });
 export const verificarPagina = (caminho: string) =>
   api<{ url: string; status: number; carregaTemplater: boolean; carregaV3: boolean }>(`implantacao/pagina?caminho=${encodeURIComponent(caminho)}`);

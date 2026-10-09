@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import type { Sessao } from "../api";
 import { carregarProduto } from "../produtos/moovin";
 import {
-  analisarScripts, ativarScript, cadastrarScript, carregarResumo, listarScripts, maxAge, NOME_SCRIPT, novoScript, urlDoScript, verificarPagina,
-  type Resumo, type ScriptMoovin,
+  analisarScripts, ativarScript, cadastrarScript, carregarResumo, listarScripts, maxAge, NOME_SCRIPT, novoScript, restritoAUmaPagina, urlDoScript,
+  usarEmTodasAsPaginas, verificarPagina, type Resumo, type ScriptMoovin,
 } from "../produtos/implantacao";
 
 // Tutorial de implantação: o que precisa estar pronto para a página de produto da loja usar o
@@ -112,7 +112,7 @@ export function Implantacao({ sessao }: { sessao: Sessao }) {
   const e2: Estado = !resumo ? "verificando" : resumo.publicadoEm ? "ok" : "erro";
   const e3: Estado = !resumo ? "verificando" : resumo.produtos > 0 ? "ok" : "aviso";
   const e4: Estado = !script ? "verificando" : "erro" in script || script.status !== 200 || !script.temTemplate ? "erro" : script.maxAge !== null && script.maxAge > 300 ? "aviso" : "ok";
-  const e5: Estado = !scripts ? "verificando" : "erro" in scripts ? "erro" : templater?.active ? "ok" : templater ? "aviso" : "erro";
+  const e5: Estado = !scripts ? "verificando" : "erro" in scripts ? "erro" : templater?.active ? (restritoAUmaPagina(templater) ? "aviso" : "ok") : templater ? "aviso" : "erro";
   const e6: Estado = !pagina ? (caminho ? "verificando" : "aguardando") : "erro" in pagina || pagina.status !== 200 ? "erro" : pagina.carregaTemplater ? "ok" : "erro";
   const e8: Estado = !scripts ? "verificando" : antigosAtivos.length ? "aviso" : "ok";
   const prontos = [e2, e3, e4, e5, e6].filter((e) => e === "ok").length + 1;
@@ -179,7 +179,25 @@ export function Implantacao({ sessao }: { sessao: Sessao }) {
             <p>Não foi possível ler os scripts da Moovin: {scripts.erro}</p>
           ) : templater ? (
             templater.active ? (
-              <p>Cadastrado como <strong>{templater.name}</strong> (tipo URL, {templater.loadPosition === "FOOTER" ? "rodapé" : "cabeçalho"}) e ativo.</p>
+              <>
+                <p>
+                  Cadastrado como <strong>{templater.name}</strong> (tipo URL, {templater.loadPosition === "FOOTER" ? "rodapé" : "cabeçalho"},{" "}
+                  {templater.page === "ALL" ? "todas as páginas" : `só na página ${templater.page}`}) e ativo.
+                </p>
+                {restritoAUmaPagina(templater) && (
+                  <>
+                    <div className="aviso">
+                      <strong>O script precisa estar em todas as páginas.</strong> A loja da Moovin troca de página sem recarregar: restrito à página
+                      de produto, o script só entra quando o produto é aberto direto. Quem chega pela home ou pela listagem vê o layout da Moovin até
+                      recarregar a página. O script continua agindo só nas páginas de produto.
+                    </div>
+                    <button type="button" className="button button-primary" disabled={!!acao}
+                      onClick={() => executar("Passando o script para todas as páginas", `Passar "${templater.name}" para todas as páginas na Moovin? Ele continua agindo só nas páginas de produto.`, () => usarEmTodasAsPaginas(templater.id))}>
+                      Passar para todas as páginas
+                    </button>
+                  </>
+                )}
+              </>
             ) : (
               <>
                 <p>Cadastrado como <strong>{templater.name}</strong>, mas <strong>inativo</strong>.</p>
@@ -193,7 +211,7 @@ export function Implantacao({ sessao }: { sessao: Sessao }) {
             <>
               <p>O script ainda não está cadastrado na Moovin. Dá para cadastrar daqui ou fazer à mão:</p>
               <button type="button" className="button button-primary" disabled={!!acao}
-                onClick={() => executar("Cadastrando o script", `Cadastrar o script "${NOME_SCRIPT}" na Moovin, ativo? A página de produto passa a usar o layout novo nos produtos com Complemento.`, () => cadastrarScript(novoScript(url, antigos)))}>
+                onClick={() => executar("Cadastrando o script", `Cadastrar o script "${NOME_SCRIPT}" na Moovin, ativo? A página de produto passa a usar o layout novo nos produtos com Complemento.`, () => cadastrarScript(novoScript(url)))}>
                 Cadastrar na Moovin automaticamente
               </button>
               <details className="manual">
@@ -202,7 +220,7 @@ export function Implantacao({ sessao }: { sessao: Sessao }) {
                   <li>No painel da Moovin, abra <strong>Configurações › Scripts</strong> e clique em <strong>Novo script</strong>.</li>
                   <li>Nome: <strong>{NOME_SCRIPT}</strong>.</li>
                   <li>Tipo: <strong>URL</strong>; método de carregamento: <strong>Defer</strong>; cole a URL do passo 1.</li>
-                  <li>Posição: <strong>Rodapé</strong>. Página: <strong>Detalhe do produto</strong> (ou Todas: o script só age nas páginas de produto).</li>
+                  <li>Posição: <strong>Rodapé</strong>. Página: <strong>Todas</strong> (o script só age nas páginas de produto; restrito à página de produto, ele não carrega quando o cliente chega pela home ou pela listagem).</li>
                   <li>Deixe <strong>ativo</strong>, salve e volte aqui para verificar.</li>
                 </ol>
               </details>

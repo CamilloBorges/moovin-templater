@@ -346,6 +346,12 @@ Ainda não há backend, API de templates nem renderizador da loja.
 - **No painel:** botão "Criar o mapa Bovino pronto" em Mapas de cortes, que aparece enquanto não existe um mapa chamado Bovino. A imagem é servida pelo próprio Templater (`/mapas/bovino.png`); o servidor aceita esse endereço também no Templater local (localhost).
 - **Testes:** 105 (dados do mapa pronto e aceitação pelo servidor). Cards conferidos com o Playwright (Ossobuco, Picanha e Acém).
 
+## Correção — script da página de produto em todas as páginas (09/10/2026)
+
+- **Bug relatado pelo Camillo:** na primeira entrada no produto o template não aparecia; só depois de recarregar a página.
+- **Causa (reproduzida no shoptest com o Playwright):** o script estava cadastrado na Moovin só para a página "Detalhe do produto". A loja é um app Next.js e troca de página sem recarregar: vindo da home ou da listagem, o script **nem era carregado** (abrindo o produto direto, carregava). Com o script carregado desde a home, o template monta no primeiro clique, em produtos diferentes e na volta.
+- **Correção:** o cadastro pela Implantação passa a usar **todas as páginas** (o renderizador já age só nas páginas de produto). O passo 5 avisa quando o script está restrito a uma página e tem o botão **"Passar para todas as páginas"** (PATCH `page: ALL` na API de scripts da Moovin).
+
 ## Próximos passos
 
 1. **Implantar (Camillo):** serviço Compose no EasyPanel a partir deste repositório e domínio **`templater.bomgado.net`** pelo túnel da Cloudflare apontando para `app:3001`. **Decisão de 06/10:** sem Cloudflare Access; o painel fica protegido só pelo login da Moovin. O caminho `/loja/*` precisa ficar **público** (sem Cloudflare Access), porque a loja o carrega no navegador do cliente.
