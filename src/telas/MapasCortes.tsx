@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, type PointerEvent as EventoPonteiro } from
 import { EditorTexto } from "../componentes/EditorTexto";
 import { enviarImagem } from "../produtos/badges";
 import { centroDaRegiao, excluirMapa, listarMapas, pontosSvg, proximoNumero, salvarMapa, tamanhoDaImagem, type DadosMapa } from "../produtos/mapas";
-import { mapaBovinoPadrao } from "../produtos/mapaBovino";
 import type { Corte, MapaCortes, Ponto } from "../templater/produto";
 import { Campo, Secao, Texto } from "./produtos/campos";
 
@@ -271,18 +270,6 @@ export function MapasCortes() {
   if (editando)
     return <EditorMapa key={editando === "novo" ? "novo" : editando.id} mapa={editando === "novo" ? null : editando} fechar={() => setEditando(null)} salvo={() => { setEditando(null); carregar(); }} />;
 
-  // Mapa pronto: o boi desenhado para o Templater e os 29 cortes com contorno (só o nome).
-  const temBovino = lista?.some((m) => m.nome.trim().toLowerCase() === "bovino");
-  async function criarBovino() {
-    setErro("");
-    try {
-      await salvarMapa(mapaBovinoPadrao(location.origin));
-      carregar();
-    } catch (e) {
-      setErro(mensagem(e));
-    }
-  }
-
   async function excluir(m: MapaCortes) {
     if (!window.confirm(`Excluir o mapa "${m.nome}" e os ${m.cortes.length} cortes dele? Os produtos que o usam deixam de mostrar o Mapa de Corte.`)) return;
     try {
@@ -298,7 +285,6 @@ export function MapasCortes() {
       <header className="topbar">
         <div className="breadcrumbs"><strong>Mapas de cortes</strong>{lista && <span>{lista.length} cadastrados</span>}</div>
         <div className="heading-actions">
-          {lista && !temBovino && <button className="button button-secondary" onClick={criarBovino}>Criar o mapa Bovino pronto</button>}
           <button className="button button-primary" onClick={() => setEditando("novo")}>Novo mapa</button>
         </div>
       </header>

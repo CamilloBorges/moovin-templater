@@ -37,20 +37,3 @@ describe("mapas de cortes", () => {
     expect(resolverMapaCorte(null, [mapa])).toBeNull();
   });
 });
-
-describe("mapa Bovino pronto", () => {
-  it("tem os 29 cortes, números únicos e contornos válidos (3 pontos ou mais, entre 0 e 1)", async () => {
-    const { mapaBovinoPadrao } = await import("./mapaBovino");
-    const mapa = mapaBovinoPadrao("https://templater.bomgado.net");
-    expect(mapa.imagem).toBe("https://templater.bomgado.net/mapas/bovino.png");
-    expect(mapa.cortes).toHaveLength(29);
-    expect(new Set(mapa.cortes.map((c) => c.numero)).size).toBe(29);
-    for (const c of mapa.cortes) {
-      expect(c.regiao.length).toBeGreaterThanOrEqual(3);
-      expect(c.regiao.length).toBeLessThanOrEqual(200);
-      expect(c.regiao.flat().every((v) => v >= 0 && v <= 1)).toBe(true);
-      expect(c.descricao).toBe("");
-    }
-    expect(mapa.cortes.find((c) => c.numero === 28)?.nome).toBe("Ossobuco");
-  });
-});

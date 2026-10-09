@@ -380,6 +380,11 @@ Ainda não há backend, API de templates nem renderizador da loja.
 - **Correção:** `imagemOriginal` tira o parâmetro `ims` do endereço (mantém a versão `v=`), e o armazenamento da Moovin devolve a foto original. Na segunda foto do ossobuco: 1080×1350, em vez de 80×80.
 - **Testes:** 129 (endereço da foto original e extração da galeria só com miniaturas).
 
+## Remoção do Mapa Bovino pronto (09/10/2026)
+
+- **Decisão do Camillo:** tirar a criação automática do mapa Bovino (botão "Criar o mapa Bovino pronto", `src/produtos/mapaBovino.ts` e `ferramentas/desenho-bovino.py`). Nem o desenho próprio nem a versão com a foto real recortada ficaram bons o bastante; os mapas passam a ser feitos à mão, num editor mais interativo (com zoom), a construir.
+- A imagem `public/mapas/bovino.png` continua no ar, para um mapa já cadastrado com ela não perder a imagem.
+
 ## Próximos passos
 
 1. **Implantar (Camillo):** serviço Compose no EasyPanel a partir deste repositório e domínio **`templater.bomgado.net`** pelo túnel da Cloudflare apontando para `app:3001`. **Decisão de 06/10:** sem Cloudflare Access; o painel fica protegido só pelo login da Moovin. O caminho `/loja/*` precisa ficar **público** (sem Cloudflare Access), porque a loja o carrega no navegador do cliente.
