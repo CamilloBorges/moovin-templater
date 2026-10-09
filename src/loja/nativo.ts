@@ -53,11 +53,25 @@ export function lerCodigo(n: Nativo): string {
   return /Cod\.?\s*:\s*(\S+)/i.exec(texto(n.info.children[0]))?.[1] ?? "";
 }
 
+// Endereço da foto em tamanho original. Na galeria nativa só a primeira foto vem inteira; as outras
+// aparecem só como miniatura, com o redimensionamento no endereço (&ims=fit-in/80x80/filters:fill(FFF)).
+// Sem o parâmetro ims, o armazenamento da Moovin devolve a foto original.
+export function imagemOriginal(src: string): string {
+  try {
+    const url = new URL(src);
+    if (!url.searchParams.has("ims")) return src;
+    url.searchParams.delete("ims");
+    return url.toString();
+  } catch {
+    return src;
+  }
+}
+
 export function extrairProduto(n: Nativo, complemento: ProdutoTemplate["complemento"], badges: ProdutoTemplate["badges"]): ProdutoTemplate {
   const cabecalho = n.info.children[0];
   const vistos = new Set<string>();
   const imagens = Array.from(n.galeria.querySelectorAll("img"))
-    .map((img) => img.currentSrc || img.src)
+    .map((img) => imagemOriginal(img.currentSrc || img.src))
     .filter((src) => {
       const chave = src.split("?")[0];
       if (!src || vistos.has(chave)) return false;
