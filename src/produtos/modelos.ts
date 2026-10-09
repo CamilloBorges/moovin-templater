@@ -67,3 +67,22 @@ export function obrigatoriasVazias(abas: Aba[], tipos: TipoAba[]): Map<number, s
 }
 
 export const modeloPadrao = (modelos: ModeloCadastro[]) => modelos.find((m) => m.padrao) ?? null;
+
+export type CategoriaArvore = { id: string; paiId: string | null; caminho: string };
+export type ModeloEscolhido = { modelo: ModeloCadastro; motivo: string };
+
+// Modelo de um produto pela categoria principal: o da própria categoria; se ela não tem, o da
+// categoria acima (subcategoria → categoria), até a raiz; por último, o padrão geral.
+export function modeloDaCategoria(modelos: ModeloCadastro[], categoriaId: string | null | undefined, categorias: CategoriaArvore[]): ModeloEscolhido | null {
+  const vistos = new Set<string>();
+  for (let id = categoriaId ?? null; id && !vistos.has(id); id = categorias.find((c) => c.id === id)?.paiId ?? null) {
+    vistos.add(id);
+    const modelo = modelos.find((m) => (m.categorias ?? []).includes(id!));
+    if (modelo) {
+      const caminho = categorias.find((c) => c.id === id)?.caminho ?? "";
+      return { modelo, motivo: id === categoriaId ? `padrão da categoria ${caminho}` : `padrão de ${caminho}, acima da categoria do produto` };
+    }
+  }
+  const geral = modeloPadrao(modelos);
+  return geral ? { modelo: geral, motivo: "padrão geral" } : null;
+}

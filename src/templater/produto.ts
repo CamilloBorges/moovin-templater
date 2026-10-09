@@ -95,8 +95,9 @@ export type TipoAba = {
   instrucao: string; // dica para quem cadastra (não vai para a loja)
 };
 
-// Modelo de cadastro: a sequência de abas de um tipo de produto. Um deles é o padrão.
-export type ModeloCadastro = { id: string; nome: string; padrao: boolean; abas: string[] }; // abas: ids de TipoAba, na ordem
+// Modelo de cadastro: a sequência de abas de um tipo de produto. É o padrão das categorias
+// (ou subcategorias) listadas; `padrao` = padrão geral, para as categorias sem modelo.
+export type ModeloCadastro = { id: string; nome: string; padrao: boolean; categorias: string[]; abas: string[] }; // abas: ids de TipoAba, na ordem
 
 // Badge (selo) cadastrado no painel: uma imagem (salva na Moovin) ou um ícone (SVG guardado no
 // cadastro, com cor e fundo). O link, se houver, abre em outra aba.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ModeloCadastro, TipoAba } from "../templater/produto";
-import { aplicarModelo, conteudoVazio, obrigatoriasVazias, sincronizarTitulos } from "./modelos";
+import { aplicarModelo, conteudoVazio, modeloDaCategoria, obrigatoriasVazias, sincronizarTitulos } from "./modelos";
 
 const tipo = (id: string, titulo: string, extra: Partial<TipoAba> = {}): TipoAba => ({ id, titulo, conteudoModelo: "", obrigatoria: false, instrucao: "", ...extra });
 const tipos = [
@@ -8,7 +8,7 @@ const tipos = [
   tipo("conservacao", "Conservação", { conteudoModelo: "<p>Manter refrigerado de 0 a 4 °C.</p>", obrigatoria: true }),
   tipo("origem", "Origem"),
 ];
-const modelo: ModeloCadastro = { id: "m", nome: "Carnes", padrao: true, abas: ["conservacao", "preparo", "origem"] };
+const modelo: ModeloCadastro = { id: "m", nome: "Carnes", padrao: true, categorias: [], abas: ["conservacao", "preparo", "origem"] };
 
 describe("aplicarModelo", () => {
   it("produto sem abas recebe as do modelo, na ordem, com o conteúdo modelo", () => {
@@ -69,5 +69,29 @@ describe("obrigatoriasVazias", () => {
     ];
     expect([...obrigatoriasVazias(abas, tipos)]).toEqual([[0, "Conservação"]]);
     expect(conteudoVazio("<p>ok</p>")).toBe(false);
+  });
+});
+
+describe("modeloDaCategoria", () => {
+  const categorias = [
+    { id: "carnes", paiId: null, caminho: "Carnes" },
+    { id: "bovinos", paiId: "carnes", caminho: "Carnes › Bovinos" },
+    { id: "nobres", paiId: "bovinos", caminho: "Carnes › Bovinos › Nobres" },
+    { id: "bebidas", paiId: null, caminho: "Bebidas" },
+  ];
+  const m = (id: string, cats: string[], padrao = false): ModeloCadastro => ({ id, nome: id, padrao, categorias: cats, abas: [] });
+
+  it("usa o modelo da própria categoria; senão sobe para a categoria acima; por último, o padrão geral", () => {
+    const modelos = [m("geral", [], true), m("carnes", ["carnes"]), m("nobres", ["nobres"])];
+    expect(modeloDaCategoria(modelos, "nobres", categorias)).toEqual({ modelo: modelos[2], motivo: "padrão da categoria Carnes › Bovinos › Nobres" });
+    expect(modeloDaCategoria(modelos, "bovinos", categorias)).toEqual({ modelo: modelos[1], motivo: "padrão de Carnes, acima da categoria do produto" });
+    expect(modeloDaCategoria(modelos, "bebidas", categorias)?.modelo.id).toBe("geral");
+    expect(modeloDaCategoria(modelos, null, categorias)?.modelo.id).toBe("geral");
+  });
+
+  it("sem padrão geral e sem modelo na categoria: nenhum; ciclo na árvore não trava", () => {
+    expect(modeloDaCategoria([m("carnes", ["carnes"])], "bebidas", categorias)).toBeNull();
+    const ciclo = [{ id: "a", paiId: "b", caminho: "A" }, { id: "b", paiId: "a", caminho: "B" }];
+    expect(modeloDaCategoria([m("x", ["z"])], "a", ciclo)).toBeNull();
   });
 });
