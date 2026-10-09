@@ -64,6 +64,11 @@ export type DocMapa = { _id: string; conta: string; nome: string; imagem: string
 // e a descrição da Moovin guarda o texto para a IA de atendimento. A loja acha o produto pelo SKU.
 export type DocComplemento = { _id: string; conta: string; produtoId: string; skus: string[]; dados: unknown; atualizadoEm: Date; atualizadoPor: string };
 
+// Configurações globais da loja (valem em todas as páginas do site, pelo script global.js).
+// largura: limita o site a uma largura máxima no desktop, centralizado.
+export type LarguraLoja = { ativo: boolean; maxima: number; corLaterais: string; sombra: boolean; blocosLarguraTotal: string[] };
+export type DocConfigLoja = { _id: string; conta: string; largura: LarguraLoja; atualizadoEm: Date; atualizadoPor: string };
+
 let db: Db;
 
 export async function conectar() {
@@ -96,3 +101,4 @@ export const badges = (): Collection<DocBadge> => db.collection<DocBadge>("badge
 export const tiposAba = (): Collection<DocTipoAba> => db.collection<DocTipoAba>("tiposAba");
 export const modelos = (): Collection<DocModelo> => db.collection<DocModelo>("modelos");
 export const mapas = (): Collection<DocMapa> => db.collection<DocMapa>("mapas");
+export const configLoja = (): Collection<DocConfigLoja> => db.collection<DocConfigLoja>("configLoja");

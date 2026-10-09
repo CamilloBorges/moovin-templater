@@ -346,6 +346,18 @@ Ainda não há backend, API de templates nem renderizador da loja.
 - **No painel:** botão "Criar o mapa Bovino pronto" em Mapas de cortes, que aparece enquanto não existe um mapa chamado Bovino. A imagem é servida pelo próprio Templater (`/mapas/bovino.png`); o servidor aceita esse endereço também no Templater local (localhost).
 - **Testes:** 105 (dados do mapa pronto e aceitação pelo servidor). Cards conferidos com o Playwright (Ossobuco, Picanha e Acém).
 
+## Fase 20 — Configurações da loja: largura do site no desktop (09/10/2026)
+
+- **Pedido do Camillo:** limitar todas as páginas do site a 1280 px no desktop. A wiki da Moovin não tem essa opção: só "centralizado" ou "adaptável" em algumas seções, com a largura do tema, sem controle do valor.
+- **Levantamento no shoptest (Playwright, 1920 px):** todo o conteúdo fica em `header`, `main` e `footer`, filhos do `body`, e as seções usam largura total (`w-full`). Limitar o `body` reduz tudo junto. Só três blocos de HTML próprios da home usam `100vw` e escapavam: `#fazenda-bomgado-mapa`, `#fazenda-bomgado-hectare` e `#barra-final`.
+- **Decisão:** fazer pelo Templater, e não colando CSS na Moovin, para ficar versionado, testado e alterável sem a propagação lenta dos scripts da Moovin. A mesma peça serve para outros ajustes globais no futuro.
+- **Tela "Configurações da loja"** (`#/loja`): liga/desliga, largura máxima (960 a 2560 px, padrão 1280), cor das laterais, sombra e a lista de blocos de largura total (só `#id` ou `.classe`, validados no servidor).
+- **Script global** `GET /loja/<conta>/global.js` (público, cache de 1 min): acrescenta um `<style id="templater-bomgado-global">` uma vez só. O CSS só age em telas maiores que a largura máxima (`@media (min-width: 1281px)`): `body` com `max-width` e `margin: 0 auto`, laterais na cor escolhida e `overflow-x: clip`; os blocos da lista passam a `width: 100%`. Sem configuração ativa, o script é só um comentário.
+- **Implantação:** passos 9 a 12 para o script global: configuração ativa, script respondendo, **cadastro na Moovin** (tipo URL, **cabeçalho**, carregamento **padrão** e **todas as páginas**, para o estilo entrar antes de a página aparecer) com o botão "Cadastrar na Moovin automaticamente" e o passo a passo manual, aviso quando o cadastro está com página, posição ou carregamento diferentes, e a página inicial da loja carregando o script.
+- **Conferido no shoptest** com o `global.js` gerado pelo servidor, injetado nas páginas: home, categoria, produto e página de texto ficam em 1280 px centralizados, sem rolagem lateral e sem nenhum elemento passando das bordas, em 1920 e 1440 px; em 1280 px e abaixo, nada muda.
+- **Coleção nova:** `configLoja` (uma por conta).
+- **Testes:** 121 (configuração, validação, CSS gerado, script aplicado uma vez só, rotas, resumo e verificação da página inicial na Implantação).
+
 ## Correção — script da página de produto em todas as páginas (09/10/2026)
 
 - **Bug relatado pelo Camillo:** na primeira entrada no produto o template não aparecia; só depois de recarregar a página.

@@ -28,6 +28,7 @@ beforeAll(async () => {
   process.env.REMBG_URL = `http://127.0.0.1:${(rembg.address() as { port: number }).port}`;
   loja = createServer((req, res) => {
     if (req.url === "/cubos/p") res.writeHead(200).end(`<html><script src="https://templater.bomgado.net/loja/${CONTA}/produto.js"></script></html>`);
+    else if (req.url === "/") res.writeHead(200).end(`<html><head><script src="https://templater.bomgado.net/loja/${CONTA}/global.js"></script></head></html>`);
     else res.writeHead(404).end("não achou");
   });
   await new Promise<void>((ok) => loja.listen(0, "127.0.0.1", ok));
@@ -231,6 +232,13 @@ describe("Implantação", () => {
     expect(ausente).toMatchObject({ status: 404, carregaTemplater: false });
   });
 
+  it("verifica se a página inicial carrega o script global", async () => {
+    const home = (await app.inject({ url: "/api/implantacao/pagina?caminho=/", headers: { cookie } })).json();
+    expect(home).toMatchObject({ status: 200, carregaGlobal: true, carregaTemplater: false });
+    const produto = (await app.inject({ url: "/api/implantacao/pagina?caminho=/cubos/p", headers: { cookie } })).json();
+    expect(produto.carregaGlobal).toBe(false);
+  });
+
   it("só abre caminhos da própria loja", async () => {
     for (const caminho of ["https://outro.site/x", "//outro.site/x", "/../etc", "x/p"]) {
       expect((await app.inject({ url: `/api/implantacao/pagina?caminho=${encodeURIComponent(caminho)}`, headers: { cookie } })).statusCode).toBe(400);
@@ -342,5 +350,58 @@ describe("Mapa Bovino pronto", () => {
     expect(prod.json().cortes).toHaveLength(29);
     expect((await enviar(mapaBovinoPadrao("http://localhost:5173"))).statusCode).toBe(200);
     expect((await enviar(mapaBovinoPadrao("http://outro.site"))).statusCode).toBe(400);
+  });
+});
+
+describe("Configurações da loja", () => {
+  const salvar = (largura: object) => app.inject({ method: "PUT", url: "/api/loja/configuracoes", headers: { cookie }, payload: { largura } });
+  const valida = { ativo: true, maxima: 1280, corLaterais: "#F2F2F2", sombra: true, blocosLarguraTotal: ["#fazenda-bomgado-mapa", " .barra ", "#fazenda-bomgado-mapa", ""] };
+
+  it("começa desligada, com os valores padrão, e o script global não muda nada", async () => {
+    const r = (await app.inject({ url: "/api/loja/configuracoes", headers: { cookie } })).json();
+    expect(r.largura).toMatchObject({ ativo: false, maxima: 1280, corLaterais: "#f2f2f2" });
+    const js = await app.inject({ url: `/loja/${CONTA}/global.js` });
+    expect(js.statusCode).toBe(200);
+    expect(js.headers["content-type"]).toContain("javascript");
+    expect(js.headers["cache-control"]).toBe("public, max-age=60");
+    expect(js.body).toBe("/* templater: nenhuma configuração global ativa */");
+  });
+
+  it("exige sessão para ler e salvar, e o script global de conta inválida é 404", async () => {
+    expect((await app.inject({ url: "/api/loja/configuracoes" })).statusCode).toBe(401);
+    expect((await app.inject({ method: "PUT", url: "/api/loja/configuracoes", payload: { largura: valida } })).statusCode).toBe(401);
+    expect((await app.inject({ url: "/loja/nao-e-conta/global.js" })).statusCode).toBe(404);
+  });
+
+  it("recusa valores inválidos", async () => {
+    for (const ruim of [
+      { ...valida, maxima: 500 },
+      { ...valida, maxima: 1280.5 },
+      { ...valida, corLaterais: "red" },
+      { ...valida, blocosLarguraTotal: ["div > p"] },
+      { ...valida, blocosLarguraTotal: ["#a{color:red}"] },
+      { ...valida, blocosLarguraTotal: ["</style><script>"] },
+    ]) {
+      expect((await salvar(ruim)).statusCode).toBe(400);
+    }
+  });
+
+  it("salva, limpa a lista de blocos e o script global passa a limitar o site", async () => {
+    const r = await salvar(valida);
+    expect(r.statusCode).toBe(200);
+    expect(r.json().largura).toEqual({ ativo: true, maxima: 1280, corLaterais: "#f2f2f2", sombra: true, blocosLarguraTotal: ["#fazenda-bomgado-mapa", ".barra"] });
+    const js = (await app.inject({ url: `/loja/${CONTA}/global.js` })).body;
+    expect(js).toContain("templater-bomgado-global");
+    expect(js).toContain("@media (min-width: 1281px)");
+    expect(js).toContain("max-width: 1280px");
+    expect(js).toContain("#fazenda-bomgado-mapa, .barra");
+    const resumo = (await app.inject({ url: "/api/implantacao/resumo", headers: { cookie } })).json();
+    expect(resumo.larguraMaxima).toBe(1280);
+  });
+
+  it("desligar volta o script global ao estado sem efeito", async () => {
+    expect((await salvar({ ...valida, ativo: false })).statusCode).toBe(200);
+    expect((await app.inject({ url: `/loja/${CONTA}/global.js` })).body).toBe("/* templater: nenhuma configuração global ativa */");
+    expect((await app.inject({ url: "/api/implantacao/resumo", headers: { cookie } })).json().larguraMaxima).toBeNull();
   });
 });

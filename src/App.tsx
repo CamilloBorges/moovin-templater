@@ -8,8 +8,9 @@ import { Badges } from "./telas/Badges";
 import { AbasModelos } from "./telas/AbasModelos";
 import { MapasCortes } from "./telas/MapasCortes";
 import { Implantacao } from "./telas/Implantacao";
+import { ConfiguracoesLoja } from "./telas/ConfiguracoesLoja";
 
-// Navegação pelo endereço: #/produtos, #/produtos/<id>, #/badges, #/abas, #/mapas, #/implantacao e #/aparencia.
+// Navegação pelo endereço: #/produtos, #/produtos/<id>, #/badges, #/abas, #/mapas, #/loja, #/implantacao e #/aparencia.
 function useRota() {
   const [rota, setRota] = useState(location.hash);
   useEffect(() => {
@@ -47,6 +48,7 @@ function Painel({ sessao, sair, secao, id }: { sessao: Sessao; sair: () => void;
   if (secao === "badges") tela = <Badges />;
   else if (secao === "abas") tela = <AbasModelos />;
   else if (secao === "mapas") tela = <MapasCortes />;
+  else if (secao === "loja") tela = <ConfiguracoesLoja />;
   else if (secao === "implantacao") tela = <Implantacao sessao={sessao} />;
   else if (id) tela = <EdicaoProduto key={id} id={id} />;
   else tela = <ListaProdutos />;
@@ -60,11 +62,12 @@ function Painel({ sessao, sair, secao, id }: { sessao: Sessao; sair: () => void;
         </div>
         <div className="nav-caption">MENU PRINCIPAL</div>
         <nav className="side-nav">
-          <a className={!["badges", "abas", "mapas", "implantacao"].includes(secao) ? "nav-active" : ""} href="#/produtos"><span>▧</span> Produtos</a>
+          <a className={!["badges", "abas", "mapas", "loja", "implantacao"].includes(secao) ? "nav-active" : ""} href="#/produtos"><span>▧</span> Produtos</a>
           <a className={secao === "badges" ? "nav-active" : ""} href="#/badges"><span>◈</span> Badges</a>
           <a className={secao === "abas" ? "nav-active" : ""} href="#/abas"><span>☰</span> Abas e modelos</a>
           <a className={secao === "mapas" ? "nav-active" : ""} href="#/mapas"><span>◐</span> Mapas de cortes</a>
           <a href="#/aparencia"><span>◩</span> Aparência</a>
+          <a className={secao === "loja" ? "nav-active" : ""} href="#/loja"><span>⚙</span> Configurações da loja</a>
           <a className={secao === "implantacao" ? "nav-active" : ""} href="#/implantacao"><span>✓</span> Implantação</a>
         </nav>
         <div className="sidebar-conta">
