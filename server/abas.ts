@@ -17,7 +17,7 @@ export async function resolverTitulosAbas(conta: string, dados: unknown) {
 }
 
 const publicoTipo = (t: DocTipoAba) => ({ id: t._id, titulo: t.titulo, conteudoModelo: t.conteudoModelo, obrigatoria: t.obrigatoria, instrucao: t.instrucao });
-const publicoModelo = (m: DocModelo) => ({ id: m._id, nome: m.nome, padrao: m.padrao, abas: m.abas });
+const publicoModelo = (m: DocModelo) => ({ id: m._id, nome: m.nome, padrao: m.padrao, categorias: m.categorias ?? [], abas: m.abas });
 
 const texto = (v: unknown) => (typeof v === "string" ? v.trim() : "");
 const semAcento = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -95,25 +95,26 @@ export async function rotasAbas(app: FastifyInstance) {
     return lista.map(publicoModelo);
   });
 
-  async function validarModelo(conta: string, corpo: Partial<Pick<DocModelo, "nome" | "padrao" | "abas">> | undefined) {
+  async function validarModelo(conta: string, corpo: Partial<Pick<DocModelo, "nome" | "padrao" | "abas" | "categorias">> | undefined) {
     const nome = texto(corpo?.nome);
     if (!nome) return "Informe o nome do modelo.";
     if (nome.length > 60) return "O nome pode ter até 60 caracteres.";
     const pedidas = Array.isArray(corpo?.abas) ? corpo.abas.filter((a): a is string => typeof a === "string") : [];
     const existentes = new Set((await tiposAba().find({ conta, _id: { $in: pedidas } }, { projection: { _id: 1 } }).toArray()).map((t) => t._id));
     const abas = [...new Set(pedidas)].filter((a) => existentes.has(a));
-    return { nome, padrao: corpo?.padrao === true, abas };
+    // Ids das categorias da Moovin (uuid); a loja não tem tantas, mas limita.
+    const categorias = Array.isArray(corpo?.categorias)
+      ? [...new Set(corpo.categorias.filter((c): c is string => typeof c === "string" && /^[\w-]{1,64}$/.test(c)))].slice(0, 500)
+      : [];
+    return { nome, padrao: corpo?.padrao === true, categorias, abas };
   }
 
-  // Só um modelo é o padrão: marcar um desmarca os outros. O primeiro modelo da loja já nasce padrão.
-  async function garantirPadrao(conta: string, escolhido?: string) {
-    if (escolhido) {
-      await modelos().updateMany({ conta, _id: { $ne: escolhido } }, { $set: { padrao: false } });
-      return;
-    }
-    if (await modelos().countDocuments({ conta, padrao: true })) return;
-    const primeiro = await modelos().findOne({ conta }, { sort: { criadoEm: 1 } });
-    if (primeiro) await modelos().updateOne({ _id: primeiro._id }, { $set: { padrao: true } });
+  // Cada categoria tem um só modelo padrão e há no máximo um padrão geral: o modelo salvo leva as
+  // categorias dele (e o padrão geral, se marcado) e os outros modelos as perdem.
+  async function exclusividade(conta: string, modelo: { _id: string; padrao: boolean; categorias?: string[] }) {
+    const outros = { conta, _id: { $ne: modelo._id } };
+    if (modelo.categorias?.length) await modelos().updateMany(outros, { $pull: { categorias: { $in: modelo.categorias } } });
+    if (modelo.padrao) await modelos().updateMany(outros, { $set: { padrao: false } });
   }
 
   app.post<{ Body: Partial<DocModelo> }>("/api/modelos", { preHandler: exigirSessao }, async (pedido, resposta) => {
@@ -123,8 +124,8 @@ export async function rotasAbas(app: FastifyInstance) {
     const agora = new Date();
     const doc: DocModelo = { _id: randomUUID(), conta, ...dados, criadoEm: agora, atualizadoEm: agora, atualizadoPor: autor(pedido) };
     await modelos().insertOne(doc);
-    await garantirPadrao(conta, doc.padrao ? doc._id : undefined);
-    return publicoModelo((await modelos().findOne({ _id: doc._id }))!);
+    await exclusividade(conta, doc);
+    return publicoModelo(doc);
   });
 
   app.put<{ Params: { id: string }; Body: Partial<DocModelo> }>("/api/modelos/:id", { preHandler: exigirSessao }, async (pedido, resposta) => {
@@ -137,16 +138,15 @@ export async function rotasAbas(app: FastifyInstance) {
       { returnDocument: "after" },
     );
     if (!r) return resposta.code(404).send({ erro: "Modelo não encontrado." });
-    await garantirPadrao(conta, r.padrao ? r._id : undefined);
-    return publicoModelo((await modelos().findOne({ _id: r._id }))!);
+    await exclusividade(conta, r);
+    return publicoModelo(r);
   });
 
-  // Excluir o padrão passa o padrão para o modelo mais antigo que sobrar.
+  // Excluir o modelo deixa as categorias dele sem modelo (ou com o padrão geral, se houver).
   app.delete<{ Params: { id: string } }>("/api/modelos/:id", { preHandler: exigirSessao }, async (pedido, resposta) => {
     const conta = pedido.sessao!.conta!.id;
     const r = await modelos().deleteOne({ _id: pedido.params.id, conta });
     if (!r.deletedCount) return resposta.code(404).send({ erro: "Modelo não encontrado." });
-    await garantirPadrao(conta);
     return { ok: true };
   });
 }

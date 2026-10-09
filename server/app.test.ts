@@ -250,20 +250,27 @@ describe("Abas e modelos de cadastro", () => {
     expect((await enviar("POST", "tipos-aba", { titulo: "prepáro" })).statusCode).toBe(409);
   });
 
-  it("o primeiro modelo nasce padrão, marcar outro desmarca, e ids desconhecidos ou repetidos saem da sequência", async () => {
+  it("modelo padrão por categoria: cada categoria em um só modelo; no máximo um padrão geral; ids inválidos saem", async () => {
     const [preparo] = await listar("tipos-aba");
     const conservacao = (await enviar("POST", "tipos-aba", { titulo: "Conservação" })).json();
-    const carnes = (await enviar("POST", "modelos", { nome: "Carnes", abas: [conservacao.id, "nao-existe", preparo.id, conservacao.id] })).json();
-    expect(carnes).toMatchObject({ padrao: true, abas: [conservacao.id, preparo.id] });
+    const carnes = (await enviar("POST", "modelos", { nome: "Carnes", categorias: ["cat-bovinos", "cat-suinos", "cat-bovinos", "<x>"], abas: [conservacao.id, "nao-existe", preparo.id, conservacao.id] })).json();
+    expect(carnes).toMatchObject({ padrao: false, categorias: ["cat-bovinos", "cat-suinos"], abas: [conservacao.id, preparo.id] });
 
-    const bebidas = (await enviar("POST", "modelos", { nome: "Bebidas", padrao: true, abas: [preparo.id] })).json();
-    expect(bebidas.padrao).toBe(true);
+    // Suínos passa para o modelo novo e sai de Carnes; o padrão geral fica com um só.
+    const suinos = (await enviar("POST", "modelos", { nome: "Suínos", padrao: true, categorias: ["cat-suinos"], abas: [preparo.id] })).json();
+    expect(suinos).toMatchObject({ padrao: true, categorias: ["cat-suinos"] });
+    const geral = (await enviar("POST", "modelos", { nome: "Geral", padrao: true, abas: [preparo.id] })).json();
     const lista = await listar("modelos");
-    expect(lista.filter((m: { padrao: boolean }) => m.padrao).map((m: { nome: string }) => m.nome)).toEqual(["Bebidas"]);
+    const porNome = Object.fromEntries(lista.map((m: { nome: string }) => [m.nome, m]));
+    expect(porNome.Carnes.categorias).toEqual(["cat-bovinos"]);
+    expect(lista.filter((m: { padrao: boolean }) => m.padrao).map((m: { nome: string }) => m.nome)).toEqual(["Geral"]);
 
-    // Excluir o padrão passa o padrão para o mais antigo.
-    expect((await enviar("DELETE", `modelos/${bebidas.id}`)).statusCode).toBe(200);
-    expect((await listar("modelos")).map((m: { nome: string; padrao: boolean }) => [m.nome, m.padrao])).toEqual([["Carnes", true]]);
+    // Modelo antigo, sem o campo categorias, chega ao painel com a lista vazia.
+    await banco.modelos().insertOne({ _id: "antigo", conta: CONTA, nome: "Antigo", padrao: false, abas: [], criadoEm: new Date(), atualizadoEm: new Date(), atualizadoPor: "" });
+    expect((await listar("modelos")).find((m: { id: string }) => m.id === "antigo").categorias).toEqual([]);
+
+    for (const id of [suinos.id, geral.id, "antigo"]) expect((await enviar("DELETE", `modelos/${id}`)).statusCode).toBe(200);
+    expect((await listar("modelos")).map((m: { nome: string; padrao: boolean }) => [m.nome, m.padrao])).toEqual([["Carnes", false]]);
   });
 
   it("a loja recebe o título atual do cadastro; excluir a aba a solta dos produtos e dos modelos", async () => {

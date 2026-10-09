@@ -317,6 +317,18 @@ Ainda não há backend, API de templates nem renderizador da loja.
 - **Recomendação:** imagem do animal em **PNG com fundo transparente**, sem textos. Com fundo chapado, aparece um retângulo diferente do fundo do card.
 - **Testes:** 103 (9 novos: geometria, resolução, rotas e galeria na loja). Visual conferido com o Playwright (a extensão do Chrome caiu): cadastro, desenho com cliques reais, arraste de ponto, produto e prévia.
 
+## Fase 18 — Modelo padrão por categoria (07/10/2026)
+
+- **Pedido do Camillo:** o "padrão" do modelo de cadastro tem de ser por categoria e subcategoria, e não um só para a loja.
+- **Regra:**
+  - cada modelo tem a lista de **categorias de que é o padrão** (categorias da Moovin, em qualquer nível), e cada categoria fica em um só modelo: escolher num modelo tira a categoria do outro;
+  - no produto sem Complemento, vale o modelo da **categoria principal**; se ela não tem, o da categoria **acima** (a subcategoria herda da categoria), até a raiz;
+  - por último, o **padrão geral** (opcional, no máximo um). Sem padrão geral, o produto abre sem abas.
+- **Mudança de comportamento:** acabou a regra "o primeiro modelo nasce padrão" e excluir o padrão não promove outro. Os modelos já gravados continuam valendo: o que era padrão vira o padrão geral, e os que não têm categorias recebem a lista vazia.
+- **Tela:** o modelo ganhou o campo "Padrão para as categorias", que avisa quando a categoria está em outro modelo; a lista tem a coluna "Padrão para" e o botão "Tornar padrão geral".
+- **Produto:** o aviso diz qual modelo entrou e por quê (ex.: "padrão de Carnes, acima da categoria do produto"); o "Aplicar modelo" já vem com o modelo da categoria selecionado.
+- **Testes:** 105 (2 novos da regra de herança, mais o de exclusividade no servidor). Telas conferidas com o Playwright e categorias simuladas: subcategoria com modelo próprio e herança da categoria.
+
 ## Próximos passos
 
 1. **Implantar (Camillo):** serviço Compose no EasyPanel a partir deste repositório e domínio **`templater.bomgado.net`** pelo túnel da Cloudflare apontando para `app:3001`. **Decisão de 06/10:** sem Cloudflare Access; o painel fica protegido só pelo login da Moovin. O caminho `/loja/*` precisa ficar **público** (sem Cloudflare Access), porque a loja o carrega no navegador do cliente.
